@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agente de Dinero</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Organiza tu plata por quincenas: lo que ganas, tus pagos fijos, tus gastos del día a día y tus metas de ahorro.">
+<meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161313" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+
+<header class="barra">
+  <div class="barra-in">
+    <a class="marca" href="#resumen">
+      <svg class="marca-logo" viewBox="0 0 32 32" aria-hidden="true">
+        <circle class="logo-moneda" cx="16" cy="16" r="15"/>
+        <circle class="logo-borde" cx="16" cy="16" r="11.5"/>
+        <path class="logo-letra" d="M19.6 11.6a5.6 5.6 0 1 0 0 8.8"/>
+      </svg>
+      <span class="marca-nombre">Agente de Dinero</span>
+    </a>
+
+    <nav class="pestanas" aria-label="Secciones">
+      <a class="pestana" href="#resumen" data-vista="resumen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17a8.5 8.5 0 1 1 17 0"/><path d="M12 17l3.6-5.4"/><circle cx="12" cy="17" r="1.3"/></svg>
+        <span>Resumen</span>
+      </a>
+      <a class="pestana" href="#gastos" data-vista="gastos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+        <span>Gastos</span>
+      </a>
+      <a class="pestana" href="#plan" data-vista="plan">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3.1A9 9 0 1 0 20.9 13H11z"/><path d="M14 2.6V10h7.4A8 8 0 0 0 14 2.6z"/></svg>
+        <span>Mi plan</span>
+      </a>
+      <a class="pestana" href="#metas" data-vista="metas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
+        <span>Metas</span>
+      </a>
+    </nav>
+
+    <button type="button" class="btn btn-primario btn-anotar" data-accion="anotar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Anotar gasto</span>
+    </button>
+  </div>
+</header>
+
+<div class="aviso aviso-ejemplo" id="aviso-ejemplo" hidden>
+  <div class="aviso-in">
+    <p><strong>Esto es un ejemplo.</strong> Los números son inventados para que veas cómo funciona. Cuando quieras, empieza con los tuyos.</p>
+    <button type="button" class="btn btn-primario btn-chico" data-accion="empezar">Empezar con mis datos</button>
+  </div>
+</div>
+
+<div class="aviso aviso-alerta" id="aviso-guardado" hidden>
+  <div class="aviso-in">
+    <p id="aviso-guardado-texto">Este navegador no deja guardar tus datos. Antes de cerrar, descarga una copia desde <a href="#plan">Mi plan</a>.</p>
+  </div>
+</div>
+
+<main class="contenido" id="contenido">
+
+  <div class="cargando" id="cargando" role="status">
+    <span class="cargando-punto" aria-hidden="true"></span>
+    <p>Cargando tus cuentas…</p>
+  </div>
+
+  <!-- RESUMEN -->
+  <section class="vista" id="vista-resumen" aria-labelledby="t-resumen" hidden>
+    <div class="vista-cabeza">
+      <p class="saludo" id="saludo">Hola</p>
+      <h1 class="sr-only" id="t-resumen">Resumen</h1>
+    </div>
+    <div class="periodo-control" data-periodo></div>
+    <div id="resumen-cuerpo"></div>
+  </section>
+
+  <!-- GASTOS -->
+  <section class="vista" id="vista-gastos" aria-labelledby="t-gastos" hidden>
+    <div class="vista-cabeza">
+      <h1 id="t-gastos">Gastos</h1>
+      <p>Todo lo que anotas: gastos, ingresos extra y lo que separas para tus metas.</p>
+    </div>
+    <div class="periodo-control" data-periodo></div>
+    <div class="gastos-grid">
+      <div class="gastos-lista">
+        <div class="filtros">
+          <div class="segmento" role="radiogroup" aria-label="Mostrar">
+            <button type="button" role="radio" data-accion="filtro-tipo" data-tipo="todo">Todo</button>
+            <button type="button" role="radio" data-accion="filtro-tipo" data-tipo="gasto">Gastos</button>
+            <button type="button" role="radio" data-accion="filtro-tipo" data-tipo="ingreso">Ingresos</button>
+            <button type="button" role="radio" data-accion="filtro-tipo" data-tipo="ahorro">Ahorro</button>
+          </div>
+          <label class="sr-only" for="filtro-cat">Categoría</label>
+          <select id="filtro-cat" class="select-chico"></select>
+        </div>
+        <div id="gastos-cuerpo"></div>
+      </div>
+      <aside class="gastos-aside" id="gastos-aside" aria-label="Totales del periodo"></aside>
+    </div>
+  </section>
+
+  <!-- MI PLAN -->
+  <section class="vista" id="vista-plan" aria-labelledby="t-plan" hidden>
+    <div class="vista-cabeza">
+      <h1 id="t-plan">Mi plan</h1>
+      <p>Llénalo una vez y cámbialo cuando algo cambie. Con esto la página calcula cuánto puedes gastar cada quincena.</p>
+    </div>
+
+    <div class="plan-grid">
+      <div class="plan-pasos">
+
+        <section class="tarjeta paso" aria-labelledby="t-paso-1">
+          <div class="paso-cabeza">
+            <span class="paso-num" aria-hidden="true">1</span>
+            <div>
+              <h2 id="t-paso-1">¿Cuánto ganas?</h2>
+              <p>Tu sueldo y cualquier otra plata que te entre seguido. Pon lo que recibes cada vez que te pagan.</p>
+            </div>
+          </div>
+          <div class="filas" id="lista-ingresos"></div>
+          <div class="paso-pie">
+            <button type="button" class="btn btn-sutil btn-chico" data-accion="agregar-ingreso">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              Agregar ingreso
+            </button>
+            <p class="paso-total" id="total-ingresos"></p>
+          </div>
+        </section>
+
+        <section class="tarjeta paso" aria-labelledby="t-paso-2">
+          <div class="paso-cabeza">
+            <span class="paso-num" aria-hidden="true">2</span>
+            <div>
+              <h2 id="t-paso-2">¿Qué pagas sí o sí?</h2>
+              <p>Arriendo, servicios, cuotas, mercado… lo que pagas cada mes o cada quincena aunque no quieras.</p>
+            </div>
+          </div>
+          <div class="sugerencias" id="sugerencias-fijos" aria-label="Agregar rápido"></div>
+          <div class="filas" id="lista-fijos"></div>
+          <div class="paso-pie">
+            <button type="button" class="btn btn-sutil btn-chico" data-accion="agregar-fijo">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              Agregar otro pago
+            </button>
+            <p class="paso-total" id="total-fijos"></p>
+          </div>
+        </section>
+
+        <section class="tarjeta paso" aria-labelledby="t-paso-3">
+          <div class="paso-cabeza">
+            <span class="paso-num" aria-hidden="true">3</span>
+            <div>
+              <h2 id="t-paso-3">¿Cuánto vas a ahorrar?</h2>
+              <p>Sepáralo apenas te paguen, antes de gastar. Empieza con 10%; si no alcanza, con 5% también se puede.</p>
+            </div>
+          </div>
+          <div class="ahorro-control">
+            <label for="ahorro-pct">Porcentaje de lo que ganas</label>
+            <div class="ahorro-fila">
+              <input type="range" id="ahorro-pct" min="0" max="40" step="1" value="10">
+              <output id="ahorro-valor" for="ahorro-pct">10%</output>
+            </div>
+            <p class="ahorro-salida" id="ahorro-salida"></p>
+          </div>
+        </section>
+      </div>
+
+      <aside class="plan-resultado">
+        <section class="tarjeta" aria-labelledby="t-reparto">
+          <h2 id="t-reparto">Así se reparte tu plata</h2>
+          <div id="reparto"></div>
+        </section>
+        <section class="tarjeta" aria-labelledby="t-diagnostico">
+          <h2 id="t-diagnostico">¿Cómo va tu plan?</h2>
+          <ul class="avisos-lista" id="diagnostico"></ul>
+        </section>
+      </aside>
+    </div>
+
+    <section class="tarjeta datos" aria-labelledby="t-datos">
+      <h2 id="t-datos">Tus datos</h2>
+      <p class="datos-donde" id="datos-donde"></p>
+      <div class="datos-grid">
+        <div class="campo">
+          <label for="nombre">¿Cómo te llamas? <span class="opcional">(opcional)</span></label>
+          <input type="text" id="nombre" maxlength="30" autocomplete="given-name" placeholder="Para saludarte">
+        </div>
+        <div class="datos-botones">
+          <button type="button" class="btn btn-sutil" data-accion="exportar" id="btn-exportar">Descargar una copia</button>
+          <label class="btn btn-sutil" for="importar-archivo">Restaurar una copia</label>
+          <input type="file" id="importar-archivo" class="sr-only" accept="application/json,.json">
+          <button type="button" class="btn btn-peligro" data-accion="borrar-todo">Borrar todo</button>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- METAS -->
+  <section class="vista" id="vista-metas" aria-labelledby="t-metas" hidden>
+    <div class="vista-cabeza vista-cabeza-accion">
+      <div>
+        <h1 id="t-metas">Metas de ahorro</h1>
+        <p>Ponle nombre a lo que quieres lograr. Una plata con nombre es más difícil de gastar.</p>
+      </div>
+      <button type="button" class="btn btn-primario" data-accion="nueva-meta">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Nueva meta
+      </button>
+    </div>
+    <div id="metas-cuerpo"></div>
+  </section>
+
+</main>
+
+<footer class="pie">
+  <p>Agente de Dinero · Tus datos se guardan en <span data-donde>este navegador</span> y no se envían a ningún lado.</p>
+</footer>
+
+<!-- DIÁLOGO: ANOTAR GASTO / INGRESO / PAGO -->
+<dialog class="dialogo" id="dlg-mov" aria-labelledby="dlg-mov-titulo">
+  <form class="dialogo-form" id="form-mov" novalidate>
+    <div class="dialogo-cabeza">
+      <h2 id="dlg-mov-titulo">Anotar gasto</h2>
+      <button type="button" class="btn-icono" data-accion="cerrar-dialogo" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="dialogo-cuerpo">
+      <div class="segmento segmento-ancho" role="radiogroup" aria-label="Tipo" id="mov-tipo">
+        <button type="button" role="radio" data-accion="mov-tipo" data-tipo="gasto">Gasto</button>
+        <button type="button" role="radio" data-accion="mov-tipo" data-tipo="ingreso">Ingreso extra</button>
+      </div>
+      <p class="nota-pago" id="mov-fijo-info" hidden></p>
+
+      <div class="campo">
+        <label for="mov-monto">¿Cuánto?</label>
+        <div class="campo-plata campo-plata-grande">
+          <span aria-hidden="true">$</span>
+          <input type="text" id="mov-monto" inputmode="numeric" autocomplete="off" placeholder="0" data-monto>
+        </div>
+      </div>
+
+      <fieldset class="campo" id="mov-categorias">
+        <legend>¿En qué?</legend>
+        <div class="cat-grid" id="mov-cat-grid"></div>
+      </fieldset>
+
+      <div class="campos-2">
+        <div class="campo">
+          <label for="mov-fecha">Fecha</label>
+          <input type="date" id="mov-fecha">
+        </div>
+        <div class="campo">
+          <label for="mov-nota">Nota <span class="opcional">(opcional)</span></label>
+          <input type="text" id="mov-nota" maxlength="60" placeholder="Ej: almuerzo">
+        </div>
+      </div>
+      <p class="error" id="mov-error" role="alert" hidden></p>
+    </div>
+    <div class="dialogo-pie">
+      <button type="button" class="btn btn-peligro-texto" data-accion="eliminar-mov" id="mov-eliminar" hidden>Eliminar</button>
+      <button type="submit" class="btn btn-primario" id="mov-guardar">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- DIÁLOGO: META -->
+<dialog class="dialogo" id="dlg-meta" aria-labelledby="dlg-meta-titulo">
+  <form class="dialogo-form" id="form-meta" novalidate>
+    <div class="dialogo-cabeza">
+      <h2 id="dlg-meta-titulo">Nueva meta</h2>
+      <button type="button" class="btn-icono" data-accion="cerrar-dialogo" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="dialogo-cuerpo">
+      <div class="campo">
+        <label for="meta-nombre">¿Para qué estás ahorrando?</label>
+        <input type="text" id="meta-nombre" maxlength="40" placeholder="Ej: Fondo de emergencia">
+        <div class="sugerencias sugerencias-chicas" id="meta-sugerencias"></div>
+      </div>
+      <div class="campos-2">
+        <div class="campo">
+          <label for="meta-objetivo">¿Cuánto necesitas?</label>
+          <div class="campo-plata">
+            <span aria-hidden="true">$</span>
+            <input type="text" id="meta-objetivo" inputmode="numeric" autocomplete="off" placeholder="0" data-monto>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="meta-inicial" id="meta-inicial-label">¿Cuánto tienes ya?</label>
+          <div class="campo-plata">
+            <span aria-hidden="true">$</span>
+            <input type="text" id="meta-inicial" inputmode="numeric" autocomplete="off" placeholder="0" data-monto>
+          </div>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="meta-fecha">¿Para cuándo? <span class="opcional">(opcional)</span></label>
+        <input type="date" id="meta-fecha">
+      </div>
+      <p class="error" id="meta-error" role="alert" hidden></p>
+    </div>
+    <div class="dialogo-pie">
+      <button type="button" class="btn btn-peligro-texto" data-accion="eliminar-meta" id="meta-eliminar" hidden>Eliminar meta</button>
+      <button type="submit" class="btn btn-primario">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- DIÁLOGO: ABONAR / SACAR DE UNA META -->
+<dialog class="dialogo" id="dlg-abono" aria-labelledby="dlg-abono-titulo">
+  <form class="dialogo-form" id="form-abono" novalidate>
+    <div class="dialogo-cabeza">
+      <h2 id="dlg-abono-titulo">Abonar</h2>
+      <button type="button" class="btn-icono" data-accion="cerrar-dialogo" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="dialogo-cuerpo">
+      <div class="segmento segmento-ancho" role="radiogroup" aria-label="¿Qué quieres hacer?">
+        <button type="button" role="radio" data-accion="abono-modo" data-modo="ahorro">Abonar</button>
+        <button type="button" role="radio" data-accion="abono-modo" data-modo="retiro">Sacar</button>
+      </div>
+      <div class="campo">
+        <label for="abono-monto">¿Cuánto?</label>
+        <div class="campo-plata campo-plata-grande">
+          <span aria-hidden="true">$</span>
+          <input type="text" id="abono-monto" inputmode="numeric" autocomplete="off" placeholder="0" data-monto>
+        </div>
+        <p class="ayuda" id="abono-ayuda"></p>
+      </div>
+      <div class="campo">
+        <label for="abono-fecha">Fecha</label>
+        <input type="date" id="abono-fecha">
+      </div>
+      <p class="error" id="abono-error" role="alert" hidden></p>
+    </div>
+    <div class="dialogo-pie">
+      <button type="button" class="btn btn-peligro-texto" data-accion="eliminar-abono" id="abono-eliminar" hidden>Eliminar</button>
+      <button type="submit" class="btn btn-primario">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- DIÁLOGO: CONFIRMAR -->
+<dialog class="dialogo dialogo-chico" id="dlg-confirmar" aria-labelledby="conf-titulo" aria-describedby="conf-texto">
+  <form class="dialogo-form" method="dialog">
+    <div class="dialogo-cuerpo">
+      <h2 id="conf-titulo">¿Seguro?</h2>
+      <p id="conf-texto"></p>
+    </div>
+    <div class="dialogo-pie">
+      <button type="submit" class="btn btn-sutil" value="no">Cancelar</button>
+      <button type="submit" class="btn btn-peligro" value="si" id="conf-si">Sí, borrar</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
