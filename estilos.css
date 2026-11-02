@@ -30,6 +30,7 @@
   --bad-soft: #fbe4e1;
   --on-bad: #ffffff;
   --barra-dato: #a8822c;
+  --columna-otra: #d8ccb2;
   --seg-fijos: #eb6834;
   --seg-ahorro: #2a78d6;
   --seg-libre: #c9a24a;
@@ -96,6 +97,7 @@
     --bad-soft: #3e2220;
     --on-bad: #1c1915;
     --barra-dato: #c79f4a;
+  --columna-otra: #4f463d;
     --seg-fijos: #d95926;
     --seg-ahorro: #3987e5;
     --seg-libre: #b08a36;
@@ -143,6 +145,7 @@
   --bad-soft: #3e2220;
   --on-bad: #1c1915;
   --barra-dato: #c79f4a;
+  --columna-otra: #4f463d;
   --seg-fijos: #d95926;
   --seg-ahorro: #3987e5;
   --seg-libre: #b08a36;
@@ -441,6 +444,7 @@ a {
   stroke: var(--on-accent);
   stroke-width: 2.6;
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .pestanas {
@@ -491,6 +495,10 @@ a {
 
 .aviso-alerta {
   background: var(--bad-soft);
+}
+
+.aviso-pagos {
+  background: var(--warn-soft);
 }
 
 .aviso-in {
@@ -1320,6 +1328,10 @@ button.pill {
   order: 3;
 }
 
+.gastos-aside .r-mes {
+  order: 4;
+}
+
 .filtros {
   display: flex;
   flex-wrap: wrap;
@@ -1774,6 +1786,15 @@ button.pill {
   gap: 1rem;
 }
 
+.datos-grid > * {
+  min-width: 0;
+}
+
+.datos-botones .btn {
+  white-space: normal;
+  text-align: center;
+}
+
 .datos-botones {
   display: flex;
   flex-wrap: wrap;
@@ -2198,7 +2219,7 @@ select:focus-visible {
     bottom: 0;
     left: 0;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0;
     margin: 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -2307,6 +2328,30 @@ select:focus-visible {
 
 /* ---------- Pantallas grandes ---------- */
 
+/* Tableta: cinco pestañas sin iconos y el botón de anotar solo con el + */
+@media (min-width: 760px) and (max-width: 1023.98px) {
+  .pestana {
+    padding-inline: 0.7rem;
+  }
+
+  .pestana svg {
+    display: none;
+  }
+
+  .btn-anotar {
+    padding-inline: 0.8rem;
+  }
+
+  .btn-anotar span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 @media (min-width: 760px) {
   .datos-grid {
     grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
@@ -2366,4 +2411,92 @@ select:focus-visible {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------- Mes a mes ---------- */
+
+.columnas {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 140px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.columna {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  height: 100%;
+}
+
+.columna-valor {
+  margin-bottom: 3px;
+  color: var(--ink-2);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.columna-barra {
+  display: block;
+  width: 100%;
+  max-width: 24px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--columna-otra);
+}
+
+.columna[data-actual] .columna-barra {
+  background: var(--barra-dato);
+}
+
+.columna[data-actual] .columna-valor {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.columnas-meses {
+  display: flex;
+  gap: 6px;
+  margin-top: 0.3rem;
+}
+
+.columnas-meses span {
+  flex: 1;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.comparacion {
+  margin: 0.9rem 0 0;
+  font-size: var(--fs-sm);
+}
+
+.cambios {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  list-style: none;
+}
+
+/* ---------- Deudas ---------- */
+
+.estrategia {
+  margin-bottom: 1rem;
+}
+
+.estrategia h2 {
+  margin-bottom: 0.75rem;
+}
+
+.nota-deudas {
+  margin-top: 1rem;
 }

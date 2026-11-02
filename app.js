@@ -21,7 +21,7 @@
 
   const CLAVE_LOCAL = 'agente-de-dinero:v1';
   const VERSION_DATOS = 1;
-  const VISTAS = ['resumen', 'gastos', 'plan', 'metas'];
+  const VISTAS = ['resumen', 'gastos', 'plan', 'metas', 'deudas'];
   const MESES_ADELANTE = 6; // hasta cuántos meses hacia adelante se puede mirar
 
   // El orden es el de la ventana "Anotar gasto": primero lo más común.
@@ -144,6 +144,15 @@
 
   function porcentaje(parte, total) {
     return total > 0 ? Math.round((parte / total) * 100) : 0;
+  }
+
+  // Marca de tiempo que nunca se repite: sirve para saber qué pasó primero
+  // (por ejemplo, un pago y la actualización del saldo de una deuda).
+  function marca() {
+    let ultima = 0;
+    for (const m of datos.movimientos) if (m.ts > ultima) ultima = m.ts;
+    for (const d of datos.deudas) if (d.base.ts > ultima) ultima = d.base.ts;
+    return Math.max(Date.now(), ultima + 1);
   }
 
   function nuevoId() {
@@ -274,6 +283,8 @@
       metas: [],
       movimientos: [],
       historial: [],
+      deudas: [],
+      topes: [],
     };
   }
 
@@ -343,8 +354,30 @@
           mov.occ = m.occ;
         }
         if ((m.tipo === 'ahorro' || m.tipo === 'retiro') && typeof m.metaId === 'string') mov.metaId = m.metaId;
+        if (m.tipo === 'gasto' && !mov.fijoId && typeof m.deudaId === 'string') mov.deudaId = m.deudaId;
+        if (Number.isFinite(m.ts) && m.ts > 0) mov.ts = Math.round(m.ts);
         return mov;
       });
+
+    d.deudas = lista(crudo.deudas).map((x) => {
+      const saldo = limpiarMonto(x.saldo);
+      const tasa = Number(x.tasaEA);
+      const base = x.base && typeof x.base === 'object' ? x.base : {};
+      return {
+        id: idUnico(x.id),
+        nombre: texto(x.nombre, 40) || 'Deuda',
+        saldo,
+        inicial: Math.max(saldo, limpiarMonto(x.inicial)),
+        cuota: limpiarMonto(x.cuota),
+        tasaEA: Number.isFinite(tasa) ? Math.min(200, Math.max(0, Math.round(tasa * 100) / 100)) : 0,
+        fijoId: typeof x.fijoId === 'string' ? x.fijoId : '',
+        base: { fecha: esFecha(base.fecha) ? base.fecha : hoy, ts: Number.isFinite(base.ts) ? base.ts : 0 },
+      };
+    });
+
+    d.topes = lista(crudo.topes)
+      .filter((x) => CAT[x.categoria])
+      .map((x) => ({ id: idUnico(x.id), categoria: x.categoria, monto: limpiarMonto(x.monto) }));
 
     d.historial = lista(crudo.historial)
       .filter((h) => typeof h.desde === 'string' && /^\d{4}-\d{2}$/.test(h.desde))
@@ -462,6 +495,14 @@
     }
 
     ej.movimientos = movs;
+    ej.deudas = [{
+      id: 'ej-deuda-moto', nombre: 'Crédito de la moto', saldo: 3100000, inicial: 4300000, cuota: 0,
+      tasaEA: 22, fijoId: 'ej-moto', base: { fecha: `${inicio}-01`, ts: 0 },
+    }];
+    ej.topes = [
+      { id: 'ej-tope-comida', categoria: 'comida', monto: 180000 },
+      { id: 'ej-tope-hormiga', categoria: 'hormiga', monto: 60000 },
+    ];
     return ej;
   }
 
@@ -665,7 +706,31 @@
       lista.push({ nivel: 'ojo', texto: `Los gastos hormiga van en <strong>${plata(hormiga)}</strong>: el ${porcentaje(hormiga, c.ingresoPlan)}% de lo que te entra. Un tinto al día también suma.` });
     }
 
-    return lista.sort((x, y) => ORDEN_NIVEL[x.nivel] - ORDEN_NIVEL[y.nivel]).slice(0, 4);
+    if (c.momento !== 'futuro') {
+      const cuando = c.momento === 'pasado' ? 'ese mes' : 'este mes';
+      for (const tope of datos.topes) {
+        if (!tope.monto) continue;
+        const usado = gastoDelMes(c.p.a, c.p.m).porCat[tope.categoria] || 0;
+        const nombre = esc(CAT[tope.categoria].nombre.toLowerCase());
+        if (usado > tope.monto) {
+          lista.push({ nivel: 'mal', texto: `Te pasaste del tope de <strong>${nombre}</strong>: llevas ${plata(usado)} de ${plata(tope.monto)} ${cuando}.` });
+        } else if (usado >= tope.monto * 0.8 && c.momento === 'actual') {
+          lista.push({ nivel: 'ojo', texto: `Vas en el ${porcentaje(usado, tope.monto)}% del tope de <strong>${nombre}</strong>: te quedan ${plata(tope.monto - usado)} para el resto del mes.` });
+        }
+      }
+    }
+
+    if (c.momento === 'actual') {
+      for (const dd of datos.deudas) {
+        const saldo = saldoDeDeuda(dd);
+        const r = tasaMensual(dd);
+        if (saldo > 0 && r > 0 && cuotaDeDeuda(dd) > 0 && cuotaDeDeuda(dd) <= saldo * r) {
+          lista.push({ nivel: 'mal', texto: `La cuota de <strong>${esc(dd.nombre)}</strong> no alcanza ni para los intereses: esa deuda va a crecer. Mira la pestaña Deudas.` });
+        }
+      }
+    }
+
+    return lista.sort((x, y) => ORDEN_NIVEL[x.nivel] - ORDEN_NIVEL[y.nivel]).slice(0, 5);
   }
 
   function calcularDiagnostico() {
@@ -789,7 +854,8 @@
   /* ───────────────────────────── Guardado ─────────────────────────────── */
 
   function descargarConEnlace(nombre, texto) {
-    const blob = new Blob([texto], { type: 'application/json' });
+    const tipo = nombre.endsWith('.ics') ? 'text/calendar' : 'application/json';
+    const blob = new Blob([texto], { type: tipo });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1285,7 +1351,8 @@
         </dl>
         <p class="ayuda">Del día a día llevas ${plata(c.variable)} de ${plata(Math.max(c.libre, 0))}. El resto son pagos fijos.</p>
       </section>
-      ${htmlCategorias(c)}`;
+      ${htmlCategorias(c)}
+      ${htmlMesAMes()}`;
   }
 
   /* ────────────────────────────── Mi plan ─────────────────────────────── */
@@ -1402,6 +1469,13 @@
     $('#lista-ingresos').innerHTML = datos.ingresos.map(htmlFilaIngreso).join('');
     $('#lista-fijos').innerHTML = datos.fijos.map(htmlFilaFijo).join('');
     renderSugerenciasFijos();
+    $('#lista-topes').innerHTML = datos.topes.map(htmlFilaTope).join('');
+    const conTope = new Set(datos.topes.map((t) => t.categoria));
+    $('#sugerencias-topes').innerHTML = ['comida', 'hormiga', 'salidas', 'ropa']
+      .filter((id) => !conTope.has(id))
+      .map((id) => `<button type="button" class="chip" data-accion="sugerir-tope" data-cat="${id}">${ICONO.mas}${esc(CAT[id].nombre)}</button>`)
+      .join('');
+    $('#btn-calendario').hidden = Boolean(window.CUENTAS_CLARAS_ALMACEN);
     $('#ahorro-pct').value = String(datos.ahorroPct);
     if (document.activeElement !== $('#nombre')) $('#nombre').value = datos.nombre;
   }
@@ -1482,6 +1556,10 @@
         nota.textContent = notaIngreso(i);
         nota.hidden = !nota.textContent;
       }
+    }
+    for (const fila of $$('#lista-topes [data-lista]')) {
+      const tope = datos.topes.find((x) => x.id === fila.dataset.id);
+      if (tope) $('[data-nota]', fila).textContent = notaTope(tope);
     }
     for (const caja of $$('#lista-fijos [data-lista]')) {
       const f = datos.fijos.find((x) => x.id === caja.dataset.id);
@@ -1565,6 +1643,394 @@
     $('#metas-cuerpo').innerHTML = html;
   }
 
+  /* ───────────────────────────── Topes ────────────────────────────────── */
+
+  // Lo gastado en un mes (pagos fijos incluidos), en total y por categoría.
+  // hasta: fecha "AAAA-MM-DD"; solo cuenta lo anotado hasta ese día.
+  function gastoDelMes(a, m, hasta = null) {
+    const p = { tipo: 'm', a, m };
+    let total = 0;
+    const porCat = {};
+    for (const mv of datos.movimientos) {
+      if (mv.tipo !== 'gasto' || !movEnPeriodo(mv, p)) continue;
+      if (hasta && mv.fecha > hasta) continue;
+      total += mv.monto;
+      porCat[mv.categoria] = (porCat[mv.categoria] || 0) + mv.monto;
+    }
+    return { total, porCat };
+  }
+
+  function notaTope(tope) {
+    if (!tope.monto) return 'Escribe el máximo que quieres gastar al mes.';
+    const [a, m] = hoyISO().split('-').map(Number);
+    const usado = gastoDelMes(a, m).porCat[tope.categoria] || 0;
+    return `Este mes llevas ${plata(usado)} de ${plata(tope.monto)} (${porcentaje(usado, tope.monto)}%).`;
+  }
+
+  function htmlFilaTope(t) {
+    const id = esc(t.id);
+    const cats = CATEGORIAS.map((c) => `<option value="${c.id}"${c.id === t.categoria ? ' selected' : ''}>${esc(c.nombre)}</option>`).join('');
+    return `<div class="fila fila-tope" data-lista="topes" data-id="${id}">
+      <div class="campo campo-nombre">
+        <label for="tope-c-${id}">Categoría</label>
+        <select id="tope-c-${id}" data-campo="categoria">${cats}</select>
+      </div>
+      <div class="campo">
+        <label for="tope-m-${id}">Máximo al mes</label>
+        <div class="campo-plata"><span aria-hidden="true">$</span><input type="text" id="tope-m-${id}" data-campo="monto" data-monto inputmode="numeric" autocomplete="off" value="${t.monto ? miles(t.monto) : ''}" placeholder="0"></div>
+      </div>
+      <button type="button" class="btn-icono btn-icono-chico btn-quitar" data-accion="quitar-tope" data-id="${id}" aria-label="Quitar el tope de ${esc(CAT[t.categoria].nombre)}">${ICONO.basura}</button>
+      <p class="fila-nota" data-nota>${esc(notaTope(t))}</p>
+    </div>`;
+  }
+
+  function agregarTope(categoria) {
+    const usadas = new Set(datos.topes.map((t) => t.categoria));
+    const cat = categoria || (CATEGORIAS.find((c) => !usadas.has(c.id)) || CATEGORIAS[0]).id;
+    const tope = { id: nuevoId(), categoria: cat, monto: 0 };
+    datos.topes.push(tope);
+    guardar();
+    renderPlan();
+    $(`#tope-m-${tope.id}`).focus();
+  }
+
+  /* ─────────────────────────── Mes a mes ──────────────────────────────── */
+
+  // 1250000 → "$1,3 M"; 350000 → "$350 mil" (para etiquetas cortas)
+  function plataCorta(n) {
+    const v = Math.round(n);
+    if (v >= 1000000) return `$${(v / 1000000).toLocaleString('es-CO', { maximumFractionDigits: 1 })} M`;
+    if (v >= 1000) return `$${Math.round(v / 1000)} mil`;
+    return plata(v);
+  }
+
+  function htmlMesAMes() {
+    const p = ui.periodo;
+    const hoy = hoyISO();
+    const minimo = mesMinimo();
+    const meses = [];
+    for (let i = 5; i >= 0; i--) {
+      const clave = sumarMeses(mesClave(p.a, p.m), -i);
+      if (clave < minimo) continue;
+      const [a, m] = clave.split('-').map(Number);
+      meses.push({ clave, a, m, ...gastoDelMes(a, m) });
+    }
+    while (meses.length && !meses[0].total) meses.shift(); // sin meses vacíos al comienzo
+    const titulo = '<div class="tarjeta-cabeza"><h2 id="t-mes">Mes a mes</h2><span class="cabeza-extra">Todo lo que gastaste</span></div>';
+    if (meses.length < 2) {
+      return `<section class="tarjeta r-mes" aria-labelledby="t-mes">${titulo}
+        <p class="ayuda">Cuando tengas más de un mes anotado, aquí vas a ver cómo te va comparado con los meses anteriores.</p></section>`;
+    }
+    const maximo = Math.max(...meses.map((x) => x.total), 1);
+    const actual = mesClave(p.a, p.m);
+    const columnas = meses.map((x) => `
+      <div class="columna"${x.clave === actual ? ' data-actual' : ''} title="${capital(MESES[x.m - 1])} ${x.a}: ${plata(x.total)}">
+        <span class="columna-valor">${x.total ? plataCorta(x.total) : '—'}</span>
+        <span class="columna-barra" style="height:${Math.round((x.total / maximo) * 110)}px"></span>
+      </div>`).join('');
+    const etiquetas = meses.map((x) => `<span>${capital(MESES_CORTOS[x.m - 1])}</span>`).join('');
+    const tabla = meses.map((x) => `<tr><th scope="row">${capital(MESES[x.m - 1])} ${x.a}</th><td>${plata(x.total)}</td></tr>`).join('');
+
+    // Comparación con el mes anterior (a la misma fecha, si es el mes de hoy)
+    const anterior = sumarMeses(actual, -1);
+    let comparacion = '';
+    if (anterior >= minimo) {
+      const [aa, ma] = anterior.split('-').map(Number);
+      const esHoy = actual === hoy.slice(0, 7);
+      const dia = Math.min(Number(hoy.slice(8)), diasEnMes(aa, ma));
+      const ahora = esHoy ? gastoDelMes(p.a, p.m, hoy) : gastoDelMes(p.a, p.m);
+      const antes = esHoy ? gastoDelMes(aa, ma, `${anterior}-${dos(dia)}`) : gastoDelMes(aa, ma);
+      const diferencia = ahora.total - antes.total;
+      const pct = porcentaje(Math.abs(diferencia), antes.total);
+      const pastilla = !antes.total || Math.abs(diferencia) < 1000 ? ''
+        : diferencia > 0 ? `<span class="pill pill-ojo">▲ ${pct}% más</span>` : `<span class="pill pill-bien">▼ ${pct}% menos</span>`;
+      const frase = esHoy
+        ? `Este mes llevas <strong>${plata(ahora.total)}</strong>. A esta fecha del mes pasado llevabas ${plata(antes.total)}.`
+        : `En ${MESES[p.m - 1]} gastaste <strong>${plata(ahora.total)}</strong> y en ${MESES[ma - 1]}, ${plata(antes.total)}.`;
+      const cambios = CATEGORIAS
+        .map((cat) => ({ cat, d: (ahora.porCat[cat.id] || 0) - (antes.porCat[cat.id] || 0) }))
+        .filter((x) => Math.abs(x.d) >= 5000)
+        .sort((x, y) => Math.abs(y.d) - Math.abs(x.d))
+        .slice(0, 3)
+        .map((x) => `<li><span aria-hidden="true">${x.cat.emoji}</span> ${esc(x.cat.nombre)}: <strong>${x.d > 0 ? '+' : '−'}${plata(Math.abs(x.d))}</strong> ${x.d > 0 ? 'más' : 'menos'}</li>`)
+        .join('');
+      comparacion = `<p class="comparacion">${frase} ${pastilla}</p>${cambios ? `<ul class="cambios">${cambios}</ul>` : ''}`;
+    }
+
+    return `<section class="tarjeta r-mes" aria-labelledby="t-mes">${titulo}
+      <div class="columnas" role="img" aria-label="Gasto por mes: ${meses.map((x) => `${MESES[x.m - 1]} ${plata(x.total)}`).join(', ')}">${columnas}</div>
+      <div class="columnas-meses" aria-hidden="true">${etiquetas}</div>
+      <table class="sr-only"><caption>Gasto por mes</caption><tbody>${tabla}</tbody></table>
+      ${comparacion}
+    </section>`;
+  }
+
+  /* ─────────────────────── Aviso de pagos arriba ──────────────────────── */
+
+  function renderAvisoPagos() {
+    const hoy = hoyISO();
+    const ocs = ocurrencias(periodoDe(hoy, 'm'), hoy);
+    const nombres = (lista) => listaBonita(lista.map((o) => `<strong>${esc(o.fijo.nombre || 'un pago')}</strong> (${plata(o.monto)})`));
+    const partes = [];
+    const vencidos = ocs.filter((o) => o.estado === 'vencido');
+    const deHoy = ocs.filter((o) => o.estado === 'hoy');
+    const manana = ocs.filter((o) => o.estado === 'pendiente' && diasEntre(hoy, o.vence) === 1);
+    if (deHoy.length) partes.push(`Hoy vence ${nombres(deHoy)}.`);
+    if (manana.length) partes.push(`Mañana vence ${nombres(manana)}.`);
+    if (vencidos.length) partes.push(vencidos.length === 1 ? `Se pasó la fecha de ${nombres(vencidos)}.` : `Tienes ${vencidos.length} pagos con la fecha vencida.`);
+    $('#aviso-pagos-texto').innerHTML = partes.join(' ');
+    $('#aviso-pagos').hidden = !partes.length || ui.vista === 'resumen';
+  }
+
+  /* ───────────────────── Recordatorios de calendario ──────────────────── */
+
+  // Arma un archivo .ics con un evento que se repite cada mes por cada pago
+  // fijo, con aviso el día anterior. El celular lo agrega a su calendario.
+  function crearCalendario() {
+    const hoy = hoyISO();
+    const [a, m, d] = hoy.split('-').map(Number);
+    const escICS = (t) => String(t).replace(/\\/g, '\\\\').replace(/[,;]/g, (x) => `\\${x}`).replace(/\n/g, '\\n');
+    const sello = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+    const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Agente de Dinero//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Pagos (Agente de Dinero)'];
+    for (const f of datos.fijos.filter((x) => x.monto > 0)) {
+      const base = ((f.dia - 1) % 15) + 1;
+      const dias = f.frecuencia === 'quincenal' ? [base, base + 15] : [f.dia];
+      dias.forEach((dia, i) => {
+        let aa = a;
+        let mm = m;
+        if (Math.min(dia, diasEnMes(aa, mm)) < d) {
+          mm += 1;
+          if (mm > 12) { mm = 1; aa += 1; }
+        }
+        const inicio = new Date(aa, mm - 1, Math.min(dia, diasEnMes(aa, mm)));
+        const fin = new Date(inicio);
+        fin.setDate(fin.getDate() + 1);
+        const fecha = (x) => aISO(x).replace(/-/g, '');
+        lineas.push(
+          'BEGIN:VEVENT',
+          `UID:${f.id}-${i}@agente-de-dinero`,
+          `DTSTAMP:${sello}`,
+          `DTSTART;VALUE=DATE:${fecha(inicio)}`,
+          `DTEND;VALUE=DATE:${fecha(fin)}`,
+          `RRULE:FREQ=MONTHLY;BYMONTHDAY=${dia > 28 ? -1 : dia}`,
+          `SUMMARY:${escICS(`Pagar ${f.nombre || 'pago fijo'} (${plata(f.monto)})`)}`,
+          `DESCRIPTION:${escICS(`Cuando pagues, toca “Ya pagué” en Agente de Dinero.${dia > 28 ? ' En los meses cortos el aviso cae el último día.' : ''}`)}`,
+          'BEGIN:VALARM',
+          'ACTION:DISPLAY',
+          `DESCRIPTION:${escICS(`Mañana vence ${f.nombre || 'un pago'}`)}`,
+          'TRIGGER:-PT15H',
+          'END:VALARM',
+          'END:VEVENT'
+        );
+      });
+    }
+    lineas.push('END:VCALENDAR');
+    return lineas.join('\r\n');
+  }
+
+  async function descargarCalendario() {
+    if (!datos.fijos.some((f) => f.monto > 0)) {
+      notificar('Primero agrega tus pagos fijos en el paso 2.');
+      return;
+    }
+    let ok = false;
+    try {
+      ok = await descargarConEnlace('agente-de-dinero-pagos.ics', crearCalendario());
+    } catch (e) {
+      ok = false;
+    }
+    notificar(ok ? 'Ábrelo en el celular para agregar los avisos a tu calendario' : 'No se pudo descargar el archivo.');
+  }
+
+  /* ───────────────────────────── Deudas ───────────────────────────────── */
+
+  function tasaMensual(dd) {
+    return dd.tasaEA > 0 ? Math.pow(1 + dd.tasaEA / 100, 1 / 12) - 1 : 0;
+  }
+
+  function fijoDeDeuda(dd) {
+    return dd.fijoId ? datos.fijos.find((f) => f.id === dd.fijoId) || null : null;
+  }
+
+  function cuotaDeDeuda(dd) {
+    const f = fijoDeDeuda(dd);
+    return f ? f.monto * (f.frecuencia === 'quincenal' ? 2 : 1) : dd.cuota;
+  }
+
+  // Un pago baja la deuda si es un abono a ella o el pago fijo de su cuota,
+  // hecho después de la última vez que se escribió el saldo.
+  function pagoDeDeuda(mv, dd) {
+    if (mv.tipo !== 'gasto') return false;
+    if (mv.deudaId !== dd.id && !(dd.fijoId && mv.fijoId === dd.fijoId)) return false;
+    if (mv.ts && dd.base.ts) return mv.ts > dd.base.ts;
+    return mv.fecha > dd.base.fecha;
+  }
+
+  // Aproximado: cada pago se resta completo; con el extracto se corrige.
+  function saldoDeDeuda(dd) {
+    const pagado = datos.movimientos.reduce((s, mv) => s + (pagoDeDeuda(mv, dd) ? mv.monto : 0), 0);
+    return Math.max(0, dd.saldo - pagado);
+  }
+
+  // Cuántos meses faltan pagando "cuota" al mes con interés mensual r.
+  function proyectar(saldo, r, cuota) {
+    if (saldo <= 0) return { meses: 0, intereses: 0 };
+    if (cuota <= 0) return null;
+    if (r === 0) return { meses: Math.ceil(saldo / cuota), intereses: 0 };
+    if (cuota <= saldo * r) return { nunca: true };
+    const meses = Math.ceil(-Math.log(1 - (r * saldo) / cuota) / Math.log(1 + r));
+    return { meses, intereses: Math.max(0, Math.round(meses * cuota - saldo)) };
+  }
+
+  function tiempoTexto(n) {
+    if (n < 12) return `${n} ${n === 1 ? 'mes' : 'meses'}`;
+    const anios = Math.floor(n / 12);
+    const resto = n % 12;
+    return `${anios} ${anios === 1 ? 'año' : 'años'}${resto ? ` y ${resto} ${resto === 1 ? 'mes' : 'meses'}` : ''}`;
+  }
+
+  function mesDentroDe(n) {
+    const [a, m] = sumarMeses(hoyISO().slice(0, 7), n).split('-').map(Number);
+    return `${MESES[m - 1]} de ${a}`;
+  }
+
+  function htmlDeuda(x) {
+    const { dd, saldo, cuota, r } = x;
+    const id = esc(dd.id);
+    const pagada = saldo <= 0;
+    const avance = dd.inicial ? Math.min(100, ((dd.inicial - saldo) / dd.inicial) * 100) : 0;
+    const fijo = fijoDeDeuda(dd);
+    const notas = [];
+    if (pagada) {
+      notas.push(`<span class="pill pill-bien">${ICONO.check} ¡Pagada!</span>`);
+    } else {
+      notas.push(cuota ? `Cuota: ${plata(cuota)} al mes${fijo ? ` (es tu pago fijo “${esc(fijo.nombre)}”)` : ''}.` : 'Escribe cuánto pagas al mes para saber cuándo terminas.');
+      notas.push(dd.tasaEA ? `Interés: ${dd.tasaEA.toLocaleString('es-CO')}% efectivo anual.` : 'Sin dato de interés: el cálculo no los cuenta.');
+      const pr = proyectar(saldo, r, cuota);
+      if (pr && pr.nunca) notas.push(`<span class="pill pill-mal">${ICONO.alerta} La cuota no alcanza ni para los intereses</span>`);
+      else if (pr) notas.push(`Terminas en <strong>${tiempoTexto(pr.meses)}</strong> (por ahí en ${mesDentroDe(pr.meses)})${pr.intereses ? ` y pagarías unos ${plata(pr.intereses)} en intereses` : ''}.`);
+    }
+    return `<article class="tarjeta meta deuda"${pagada ? ' data-lista' : ''} aria-labelledby="deuda-t-${id}">
+      <div class="meta-cabeza">
+        <h2 id="deuda-t-${id}">${esc(dd.nombre)}</h2>
+        <button type="button" class="btn-icono btn-icono-chico" data-accion="editar-deuda" data-id="${id}" aria-label="Editar ${esc(dd.nombre)}">${ICONO.lapiz}</button>
+      </div>
+      <p class="meta-cifras"><strong>${plata(saldo)}</strong>${pagada ? 'no debes nada' : 'debes hoy'}</p>
+      ${dd.inicial ? `<div class="meta-barra" role="progressbar" aria-label="Lo pagado de ${esc(dd.nombre)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.floor(avance)}"><span style="width:${avance.toFixed(1)}%"></span></div>
+      <p class="meta-nota">Has pagado el ${Math.floor(avance)}% de ${plata(dd.inicial)}.</p>` : ''}
+      ${notas.map((n) => `<p class="meta-nota">${n}</p>`).join('')}
+      <div class="meta-botones">
+        ${pagada ? '' : `<button type="button" class="btn btn-primario btn-chico" data-accion="abonar-deuda" data-id="${id}">Abonar extra</button>`}
+        <button type="button" class="btn btn-sutil btn-chico" data-accion="actualizar-saldo" data-id="${id}">Actualizar saldo</button>
+      </div>
+    </article>`;
+  }
+
+  function renderDeudas() {
+    const lista = datos.deudas.map((dd) => ({ dd, saldo: saldoDeDeuda(dd), cuota: cuotaDeDeuda(dd), r: tasaMensual(dd) }));
+    if (!lista.length) {
+      $('#deudas-cuerpo').innerHTML = `<div class="vacio"><h2>No tienes deudas anotadas</h2>
+        <p>Si debes algo (tarjeta, crédito, un préstamo), anótalo. Ver cuánto falta y cuándo terminas ayuda a salir más rápido.</p>
+        <div class="vacio-botones"><button type="button" class="btn btn-primario" data-accion="nueva-deuda">Agregar deuda</button></div></div>`;
+      return;
+    }
+    const pendientes = lista.filter((x) => x.saldo > 0);
+    const total = pendientes.reduce((s, x) => s + x.saldo, 0);
+    const cuotas = pendientes.reduce((s, x) => s + x.cuota, 0);
+    const ingreso = ingresoMensual();
+    const avisos = [];
+
+    if (pendientes.length) {
+      const conTasa = pendientes.some((x) => x.r > 0);
+      const objetivo = pendientes.slice().sort((x, y) => (conTasa ? y.r - x.r : x.saldo - y.saldo))[0];
+      if (pendientes.length > 1) {
+        avisos.push({
+          nivel: 'info',
+          texto: conTasa
+            ? `Paga la cuota de todas y, si te sobra algo, abónalo a <strong>${esc(objetivo.dd.nombre)}</strong>: es la que más intereses cobra. Cuando la termines, pasa esa cuota a la siguiente.`
+            : `Paga la cuota de todas y, si te sobra algo, abónalo a <strong>${esc(objetivo.dd.nombre)}</strong>, la más pequeña. Terminarla rápido te libera esa cuota para la siguiente.`,
+        });
+      }
+      const antes = proyectar(objetivo.saldo, objetivo.r, objetivo.cuota);
+      const despues = proyectar(objetivo.saldo, objetivo.r, objetivo.cuota + 50000);
+      if (antes && despues && !despues.nunca) {
+        const ahorroMeses = antes.nunca ? null : antes.meses - despues.meses;
+        if (antes.nunca) {
+          avisos.push({ nivel: 'mal', texto: `Con la cuota de ahora, <strong>${esc(objetivo.dd.nombre)}</strong> no baja. Si le pagas ${plata(50000)} más al mes, la terminas en ${tiempoTexto(despues.meses)}.` });
+        } else if (ahorroMeses > 0) {
+          const ahorroInteres = antes.intereses - despues.intereses;
+          avisos.push({ nivel: 'bien', texto: `Si le abonas ${plata(50000)} más al mes a <strong>${esc(objetivo.dd.nombre)}</strong>, terminas ${tiempoTexto(ahorroMeses)} antes${ahorroInteres > 0 ? ` y te ahorras unos ${plata(ahorroInteres)} en intereses` : ''}.` });
+        }
+      }
+      if (ingreso && cuotas / ingreso > 0.3) {
+        avisos.push({ nivel: 'ojo', texto: `Tus cuotas se llevan el <strong>${porcentaje(cuotas, ingreso)}%</strong> de lo que ganas. Lo sano es que no pasen del 30%: evita sacar más créditos por ahora.` });
+      }
+    }
+
+    $('#deudas-cuerpo').innerHTML = `
+      <p class="metas-total">${pendientes.length ? `Debes <strong>${plata(total)}</strong> en total y pagas ${plata(cuotas)} al mes en cuotas.` : '¡No debes nada! 🎉'}</p>
+      ${avisos.length ? `<section class="tarjeta estrategia" aria-labelledby="t-estrategia"><h2 id="t-estrategia">Cómo salir más rápido</h2><ul class="avisos-lista">${avisos.sort((x, y) => ORDEN_NIVEL[x.nivel] - ORDEN_NIVEL[y.nivel]).map(htmlAviso).join('')}</ul></section>` : ''}
+      <div class="metas-grid">${lista.map(htmlDeuda).join('')}</div>
+      <p class="ayuda nota-deudas">Los cálculos son aproximados. De vez en cuando toca “Actualizar saldo” con lo que diga el extracto.</p>`;
+  }
+
+  let deudaEditando = null;
+
+  function actualizarCuotaDeuda() {
+    $('#deuda-cuota-campo').hidden = Boolean($('#deuda-fijo').value);
+  }
+
+  function abrirDeuda(dd = null, enfocarSaldo = false) {
+    deudaEditando = dd;
+    $('#dlg-deuda-titulo').textContent = dd ? (enfocarSaldo ? 'Actualizar saldo' : 'Editar deuda') : 'Agregar deuda';
+    $('#deuda-nombre').value = dd ? dd.nombre : '';
+    const saldo = dd ? saldoDeDeuda(dd) : 0;
+    $('#deuda-saldo').value = saldo ? miles(saldo) : '';
+    $('#deuda-saldo').dataset.antes = String(saldo);
+    $('#deuda-fijo').innerHTML = '<option value="">No, la escribo aquí</option>' + datos.fijos
+      .map((f) => `<option value="${esc(f.id)}"${dd && dd.fijoId === f.id ? ' selected' : ''}>${esc(f.nombre || 'Pago sin nombre')} · ${plata(f.monto * (f.frecuencia === 'quincenal' ? 2 : 1))} al mes</option>`)
+      .join('');
+    $('#deuda-cuota').value = dd && dd.cuota ? miles(dd.cuota) : '';
+    $('#deuda-tasa').value = dd && dd.tasaEA ? String(dd.tasaEA) : '';
+    $('#deuda-eliminar').hidden = !dd;
+    actualizarCuotaDeuda();
+    ocultarError('deuda');
+    $('#dlg-deuda').showModal();
+    if (enfocarSaldo) $('#deuda-saldo').focus();
+    else $('#deuda-nombre').focus();
+  }
+
+  function guardarDeuda(e) {
+    e.preventDefault();
+    const nombre = $('#deuda-nombre').value.trim().slice(0, 40);
+    const saldo = leerMonto($('#deuda-saldo').value);
+    const fijoId = $('#deuda-fijo').value;
+    const cuota = fijoId ? 0 : leerMonto($('#deuda-cuota').value);
+    const textoTasa = $('#deuda-tasa').value.trim().replace(',', '.');
+    const tasa = textoTasa ? Number(textoTasa) : 0;
+    if (!nombre) return mostrarError('deuda', 'Ponle un nombre a la deuda.', $('#deuda-nombre'));
+    if (!deudaEditando && !saldo) return mostrarError('deuda', 'Escribe cuánto debes hoy.', $('#deuda-saldo'));
+    if (!fijoId && !cuota) return mostrarError('deuda', 'Escribe cuánto pagas al mes, o elige el pago fijo de la cuota.', $('#deuda-cuota'));
+    if (!Number.isFinite(tasa) || tasa < 0 || tasa > 200) return mostrarError('deuda', 'Revisa el interés: es un número entre 0 y 200.', $('#deuda-tasa'));
+
+    const ahora = { fecha: hoyISO(), ts: marca() };
+    if (deudaEditando) {
+      const dd = deudaEditando;
+      Object.assign(dd, { nombre, cuota, fijoId, tasaEA: Math.round(tasa * 100) / 100 });
+      if (saldo !== Number($('#deuda-saldo').dataset.antes)) {
+        dd.saldo = saldo;
+        dd.base = ahora;
+        dd.inicial = Math.max(dd.inicial, saldo);
+      }
+    } else {
+      datos.deudas.push({ id: nuevoId(), nombre, saldo, inicial: saldo, cuota, tasaEA: Math.round(tasa * 100) / 100, fijoId, base: ahora });
+    }
+    $('#dlg-deuda').close();
+    guardar();
+    renderVista();
+    notificar(deudaEditando ? 'Deuda guardada' : 'Deuda agregada');
+  }
+
   /* ─────────────────────────── Vistas y rutas ─────────────────────────── */
 
   function renderSaludo() {
@@ -1574,6 +2040,7 @@
 
   function renderVista() {
     $('#aviso-ejemplo').hidden = !datos.ejemplo;
+    renderAvisoPagos();
     for (const el of $$('[data-donde]')) el.textContent = almacen.donde;
     renderSaludo();
     if (ui.vista === 'resumen' || ui.vista === 'gastos') {
@@ -1582,6 +2049,7 @@
     if (ui.vista === 'resumen') renderResumen();
     else if (ui.vista === 'gastos') renderGastos();
     else if (ui.vista === 'plan') renderPlan();
+    else if (ui.vista === 'deudas') renderDeudas();
     else renderMetas();
   }
 
@@ -1611,7 +2079,7 @@
 
   /* ──────────────────────── Diálogo: movimiento ───────────────────────── */
 
-  let movEstado = { mov: null, fijo: null, occ: null, tipo: 'gasto' };
+  let movEstado = { mov: null, fijo: null, occ: null, deuda: null, tipo: 'gasto' };
 
   function mostrarError(prefijo, texto, enfocar) {
     const el = $(`#${prefijo}-error`);
@@ -1629,22 +2097,24 @@
     for (const b of $$('[data-accion="mov-tipo"]')) b.setAttribute('aria-checked', String(b.dataset.tipo === tipo));
     $('#mov-categorias').hidden = tipo !== 'gasto';
     $('#mov-nota').placeholder = tipo === 'gasto' ? 'Ej: almuerzo' : 'Ej: trabajo extra';
-    if (!movEstado.mov && !movEstado.occ) $('#dlg-mov-titulo').textContent = tipo === 'gasto' ? 'Anotar gasto' : 'Anotar ingreso extra';
+    if (!movEstado.mov && !movEstado.occ && !movEstado.deuda) $('#dlg-mov-titulo').textContent = tipo === 'gasto' ? 'Anotar gasto' : 'Anotar ingreso extra';
   }
 
-  function abrirMovimiento({ mov = null, fijo = null, occ = null } = {}) {
+  function abrirMovimiento({ mov = null, fijo = null, occ = null, deuda = null } = {}) {
     if (mov && mov.fijoId) {
       fijo = datos.fijos.find((f) => f.id === mov.fijoId) || null;
       occ = mov.occ;
     }
-    movEstado = { mov, fijo, occ, tipo: mov ? mov.tipo : 'gasto' };
+    if (mov && mov.deudaId) deuda = datos.deudas.find((x) => x.id === mov.deudaId) || null;
+    movEstado = { mov, fijo, occ, deuda, tipo: mov ? mov.tipo : 'gasto' };
     const esPago = Boolean(occ);
 
     let titulo = 'Anotar gasto';
     if (esPago) titulo = mov ? 'Pago fijo' : 'Registrar pago';
+    else if (deuda) titulo = mov ? 'Abono a deuda' : 'Abonar a la deuda';
     else if (mov) titulo = mov.tipo === 'ingreso' ? 'Editar ingreso extra' : 'Editar gasto';
     $('#dlg-mov-titulo').textContent = titulo;
-    $('#mov-tipo').hidden = esPago || Boolean(mov);
+    $('#mov-tipo').hidden = esPago || Boolean(mov) || Boolean(deuda);
 
     const info = $('#mov-fijo-info');
     if (esPago) {
@@ -1652,16 +2122,19 @@
       const nombre = fijo ? fijo.nombre : (mov && mov.nota) || 'Pago fijo';
       info.textContent = `${nombre}: pago de la ${q === 1 ? '1ª' : '2ª'} quincena de ${MESES[m - 1]} de ${a}. Si pagaste un valor distinto, cámbialo.`;
       info.hidden = false;
+    } else if (deuda) {
+      info.textContent = `Abono extra a ${deuda.nombre}. Se descuenta de lo que debes y cuenta como gasto de deudas.`;
+      info.hidden = false;
     } else {
       info.hidden = true;
     }
 
     const monto = mov ? mov.monto : fijo ? fijo.monto : 0;
     $('#mov-monto').value = monto ? miles(monto) : '';
-    const categoria = mov ? mov.categoria : fijo ? fijo.categoria : '';
+    const categoria = mov ? mov.categoria : fijo ? fijo.categoria : deuda ? 'deudas' : '';
     for (const r of $$('input[name="mov-cat"]')) r.checked = r.value === categoria;
     $('#mov-fecha').value = mov ? mov.fecha : hoyISO();
-    $('#mov-nota').value = mov ? mov.nota : fijo ? fijo.nombre : '';
+    $('#mov-nota').value = mov ? mov.nota : fijo ? fijo.nombre : deuda ? `Abono a ${deuda.nombre}` : '';
     $('#mov-eliminar').hidden = !mov;
     $('#mov-eliminar').textContent = esPago ? 'Desmarcar pago' : 'Eliminar';
     $('#mov-guardar').textContent = esPago && !mov ? 'Guardar pago' : 'Guardar';
@@ -1690,10 +2163,12 @@
     if (mov) {
       Object.assign(mov, { monto, fecha, categoria, nota });
     } else {
-      const nuevo = { id: nuevoId(), tipo: movEstado.tipo, monto, fecha, categoria, nota };
+      const nuevo = { id: nuevoId(), tipo: movEstado.tipo, monto, fecha, categoria, nota, ts: marca() };
       if (occ) {
         nuevo.fijoId = fijo ? fijo.id : '';
         nuevo.occ = occ;
+      } else if (movEstado.deuda) {
+        nuevo.deudaId = movEstado.deuda.id;
       }
       datos.movimientos.push(nuevo);
     }
@@ -1701,7 +2176,7 @@
     guardar();
     renderVista();
     let texto = 'Cambios guardados';
-    if (!mov) texto = occ ? 'Pago registrado' : movEstado.tipo === 'ingreso' ? 'Ingreso anotado' : 'Gasto anotado';
+    if (!mov) texto = occ ? 'Pago registrado' : movEstado.deuda ? 'Abono registrado' : movEstado.tipo === 'ingreso' ? 'Ingreso anotado' : 'Gasto anotado';
     notificar(texto);
   }
 
@@ -1816,7 +2291,7 @@
     if (mov) {
       Object.assign(mov, { tipo: modo, monto, fecha });
     } else {
-      datos.movimientos.push({ id: nuevoId(), tipo: modo, monto, fecha, categoria: '', nota: '', metaId: meta.id });
+      datos.movimientos.push({ id: nuevoId(), tipo: modo, monto, fecha, categoria: '', nota: '', metaId: meta.id, ts: marca() });
     }
     $('#dlg-abono').close();
     guardar();
@@ -2066,6 +2541,38 @@
       $('#dlg-abono').close();
       if (mov) eliminarMovimiento(mov);
     },
+    'agregar-tope': () => agregarTope(''),
+    'sugerir-tope': (el) => agregarTope(el.dataset.cat),
+    'quitar-tope': (el) => quitarDeLista(datos.topes, el.dataset.id, 'Tope quitado'),
+    calendario: () => descargarCalendario(),
+    'nueva-deuda': () => abrirDeuda(),
+    'editar-deuda': (el) => {
+      const dd = datos.deudas.find((x) => x.id === el.dataset.id);
+      if (dd) abrirDeuda(dd);
+    },
+    'actualizar-saldo': (el) => {
+      const dd = datos.deudas.find((x) => x.id === el.dataset.id);
+      if (dd) abrirDeuda(dd, true);
+    },
+    'abonar-deuda': (el) => {
+      const deuda = datos.deudas.find((x) => x.id === el.dataset.id);
+      if (deuda) abrirMovimiento({ deuda });
+    },
+    'eliminar-deuda': async () => {
+      const dd = deudaEditando;
+      if (!dd) return;
+      const si = await confirmar({
+        titulo: `¿Borrar la deuda “${dd.nombre}”?`,
+        texto: 'Sus abonos se quedan en tus gastos, para que tus cuentas pasadas no cambien.',
+        si: 'Sí, borrar deuda',
+      });
+      if (!si) return;
+      datos.deudas = datos.deudas.filter((x) => x !== dd);
+      $('#dlg-deuda').close();
+      guardar();
+      renderVista();
+      notificar('Deuda borrada');
+    },
   };
 
   /* ───────────────────────────── Eventos ──────────────────────────────── */
@@ -2146,6 +2653,8 @@
         renderGastos();
       } else if (el.id === 'importar-archivo') {
         importar(el);
+      } else if (el.id === 'deuda-fijo') {
+        actualizarCuotaDeuda();
       } else if (el.matches('[data-campo="dia"]')) {
         const caja = el.closest('[data-lista][data-id]');
         const f = caja && datos.fijos.find((x) => x.id === caja.dataset.id);
@@ -2166,6 +2675,7 @@
     $('#form-mov').addEventListener('submit', guardarMovimiento);
     $('#form-meta').addEventListener('submit', guardarMeta);
     $('#form-abono').addEventListener('submit', guardarAbono);
+    $('#form-deuda').addEventListener('submit', guardarDeuda);
 
     // Tocar fuera de una ventana la cierra.
     for (const d of $$('dialog.dialogo')) {
@@ -2220,6 +2730,11 @@
 
     $('#cargando').hidden = true;
     rutear();
+
+    // Instalable y sin internet cuando la página está publicada en https.
+    if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.CUENTAS_CLARAS_ALMACEN) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);

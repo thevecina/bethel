@@ -10,16 +10,30 @@ Cuando quieras, toca **Empezar con mis datos**.
 
 ## Qué hace
 
-- **Mi plan**: escribes cuánto ganas (quincenal, mensual o semanal), lo que pagas sí o sí
-  (arriendo, servicios, cuotas, mercado…) y qué porcentaje vas a ahorrar. La página calcula
-  cuánto te queda para el día a día en cada quincena y por día. Si los pagos grandes caen en
-  una sola quincena, te dice cuánto apartar de la otra para que ambas queden parejas.
+- **Mi plan**: lo que ganas (quincenal, mensual o semanal), lo que pagas sí o sí con su día de
+  pago, qué porcentaje vas a ahorrar y, si quieres, un tope al mes para lo que más se te va
+  (comida afuera, gastos hormiga…). Calcula cuánto te queda para el día a día en cada quincena
+  y por día, y cuánto apartar de una quincena para los pagos grandes de la otra.
 - **Resumen**: cuánto te queda en la quincena (o en el mes), cuánto puedes gastar por día,
-  qué pagos vencen y cuáles ya pagaste, en qué se te va la plata y avisos útiles
-  (pagos vencidos, gastos hormiga, si vas gastando más rápido de lo planeado).
-- **Gastos**: anotas cada gasto o ingreso extra en segundos y los ves por día, con filtros.
+  qué pagos vencen y cuáles ya pagaste, en qué se te va la plata y avisos: pagos vencidos,
+  topes que te pasaste, gastos hormiga, si vas gastando más rápido de lo planeado.
+- **Gastos**: anotas cada gasto o ingreso extra en segundos y los ves por día, con filtros,
+  y una gráfica **mes a mes** que compara con el mes anterior.
 - **Metas**: metas de ahorro (fondo de emergencia, regalos de diciembre…) con cuánto abonar
   cada quincena para llegar a tiempo.
+- **Deudas**: cuánto debes, cuándo terminas contando los intereses, por cuál empezar y cuánto
+  te ahorras si abonas un poco más.
+- **Recordatorios**: en *Mi plan → Tus datos* descargas un archivo para el calendario del
+  celular, que te avisa un día antes de cada pago.
+
+## Usarla en el celular como una app
+
+1. En GitHub, entra a **Settings → Pages**.
+2. En *Branch* elige `main` y la carpeta `/ (root)`, y toca **Save**.
+3. En un par de minutos GitHub te da una dirección (algo como
+   `https://TU-USUARIO.github.io/NOMBRE-DEL-REPOSITORIO/`).
+4. Ábrela en el celular y elige **Agregar a la pantalla de inicio**. Queda con su icono y
+   funciona sin internet.
 
 ## Tus datos
 
@@ -32,3 +46,4 @@ Si borras el historial del navegador o cambias de celular, se pierden; por eso e
 - `index.html`: la estructura de la página.
 - `estilos.css`: el diseño (modo claro y oscuro, celular y computador).
 - `app.js`: los cálculos y el guardado, con comentarios en español.
+- `manifest.webmanifest`, `sw.js` e `icono*`: lo necesario para instalarla como app y usarla sin internet.

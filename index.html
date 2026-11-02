@@ -8,6 +8,9 @@
 <meta name="description" content="Organiza tu plata por quincenas: lo que ganas, tus pagos fijos, tus gastos del día a día y tus metas de ahorro.">
 <meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#161313" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icono-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
@@ -22,7 +25,7 @@
       <svg class="marca-logo" viewBox="0 0 32 32" aria-hidden="true">
         <circle class="logo-moneda" cx="16" cy="16" r="15"/>
         <circle class="logo-borde" cx="16" cy="16" r="11.5"/>
-        <path class="logo-letra" d="M19.6 11.6a5.6 5.6 0 1 0 0 8.8"/>
+        <path class="logo-letra" d="M11.4 21.2L16 10.6l4.6 10.6M13.1 17.6h5.8"/>
       </svg>
       <span class="marca-nombre">Agente de Dinero</span>
     </a>
@@ -44,6 +47,10 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
         <span>Metas</span>
       </a>
+      <a class="pestana" href="#deudas" data-vista="deudas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+        <span>Deudas</span>
+      </a>
     </nav>
 
     <button type="button" class="btn btn-primario btn-anotar" data-accion="anotar">
@@ -63,6 +70,13 @@
 <div class="aviso aviso-alerta" id="aviso-guardado" hidden>
   <div class="aviso-in">
     <p id="aviso-guardado-texto">Este navegador no deja guardar tus datos. Antes de cerrar, descarga una copia desde <a href="#plan">Mi plan</a>.</p>
+  </div>
+</div>
+
+<div class="aviso aviso-pagos" id="aviso-pagos" hidden>
+  <div class="aviso-in">
+    <p id="aviso-pagos-texto"></p>
+    <a class="btn btn-sutil btn-chico" href="#resumen">Ver pagos</a>
   </div>
 </div>
 
@@ -172,6 +186,24 @@
             <p class="ahorro-salida" id="ahorro-salida"></p>
           </div>
         </section>
+
+        <section class="tarjeta paso" aria-labelledby="t-paso-4">
+          <div class="paso-cabeza">
+            <span class="paso-num" aria-hidden="true">4</span>
+            <div>
+              <h2 id="t-paso-4">¿Le pones tope a algo? <span class="opcional">(opcional)</span></h2>
+              <p>Un máximo al mes para lo que más se te va, como comida afuera o gastos hormiga. Te avisamos cuando vayas llegando.</p>
+            </div>
+          </div>
+          <div class="sugerencias" id="sugerencias-topes" aria-label="Agregar rápido"></div>
+          <div class="filas" id="lista-topes"></div>
+          <div class="paso-pie">
+            <button type="button" class="btn btn-sutil btn-chico" data-accion="agregar-tope">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              Agregar tope
+            </button>
+          </div>
+        </section>
       </div>
 
       <aside class="plan-resultado">
@@ -195,6 +227,7 @@
           <input type="text" id="nombre" maxlength="30" autocomplete="given-name" placeholder="Para saludarte">
         </div>
         <div class="datos-botones">
+          <button type="button" class="btn btn-sutil" data-accion="calendario" id="btn-calendario">Recordatorios para mi calendario</button>
           <button type="button" class="btn btn-sutil" data-accion="exportar" id="btn-exportar">Descargar una copia</button>
           <label class="btn btn-sutil" for="importar-archivo">Restaurar una copia</label>
           <input type="file" id="importar-archivo" class="sr-only" accept="application/json,.json">
@@ -217,6 +250,21 @@
       </button>
     </div>
     <div id="metas-cuerpo"></div>
+  </section>
+
+  <!-- DEUDAS -->
+  <section class="vista" id="vista-deudas" aria-labelledby="t-deudas" hidden>
+    <div class="vista-cabeza vista-cabeza-accion">
+      <div>
+        <h1 id="t-deudas">Deudas</h1>
+        <p>Anota lo que debes: tarjetas, créditos, préstamos. Te decimos cuándo terminas y por cuál empezar.</p>
+      </div>
+      <button type="button" class="btn btn-primario" data-accion="nueva-deuda">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Agregar deuda
+      </button>
+    </div>
+    <div id="deudas-cuerpo"></div>
   </section>
 
 </main>
@@ -347,6 +395,55 @@
     </div>
     <div class="dialogo-pie">
       <button type="button" class="btn btn-peligro-texto" data-accion="eliminar-abono" id="abono-eliminar" hidden>Eliminar</button>
+      <button type="submit" class="btn btn-primario">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- DIÁLOGO: DEUDA -->
+<dialog class="dialogo" id="dlg-deuda" aria-labelledby="dlg-deuda-titulo">
+  <form class="dialogo-form" id="form-deuda" novalidate>
+    <div class="dialogo-cabeza">
+      <h2 id="dlg-deuda-titulo">Agregar deuda</h2>
+      <button type="button" class="btn-icono" data-accion="cerrar-dialogo" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="dialogo-cuerpo">
+      <div class="campo">
+        <label for="deuda-nombre">¿Qué deuda es?</label>
+        <input type="text" id="deuda-nombre" maxlength="40" placeholder="Ej: Tarjeta de crédito">
+      </div>
+      <div class="campo">
+        <label for="deuda-saldo" id="deuda-saldo-label">¿Cuánto debes hoy?</label>
+        <div class="campo-plata">
+          <span aria-hidden="true">$</span>
+          <input type="text" id="deuda-saldo" inputmode="numeric" autocomplete="off" placeholder="0" data-monto>
+        </div>
+        <p class="ayuda">Míralo en el extracto o en la app del banco.</p>
+      </div>
+      <div class="campo">
+        <label for="deuda-fijo">¿La cuota ya está en tus pagos fijos?</label>
+        <select id="deuda-fijo"></select>
+      </div>
+      <div class="campos-2">
+        <div class="campo" id="deuda-cuota-campo">
+          <label for="deuda-cuota">Cuota al mes</label>
+          <div class="campo-plata">
+            <span aria-hidden="true">$</span>
+            <input type="text" id="deuda-cuota" inputmode="numeric" autocomplete="off" placeholder="0" data-monto>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="deuda-tasa">Interés <span class="opcional">(% E.A.)</span></label>
+          <input type="number" id="deuda-tasa" min="0" max="200" step="0.1" inputmode="decimal" placeholder="Ej: 28">
+        </div>
+      </div>
+      <p class="ayuda">El interés efectivo anual (E.A.) sale en el extracto. Si no lo sabes, déjalo vacío.</p>
+      <p class="error" id="deuda-error" role="alert" hidden></p>
+    </div>
+    <div class="dialogo-pie">
+      <button type="button" class="btn btn-peligro-texto" data-accion="eliminar-deuda" id="deuda-eliminar" hidden>Borrar deuda</button>
       <button type="submit" class="btn btn-primario">Guardar</button>
     </div>
   </form>
