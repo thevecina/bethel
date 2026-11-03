@@ -26,20 +26,20 @@
 
   // El orden es el de la ventana "Anotar gasto": primero lo más común.
   const CATEGORIAS = [
-    { id: 'comida', nombre: 'Comida afuera', emoji: '🍔', color: '#ff9500' },
-    { id: 'hormiga', nombre: 'Gastos hormiga', emoji: '☕', color: '#a2845e' },
-    { id: 'transporte', nombre: 'Transporte', emoji: '🚌', color: '#007aff' },
-    { id: 'mercado', nombre: 'Mercado', emoji: '🛒', color: '#34c759' },
-    { id: 'salidas', nombre: 'Salidas y planes', emoji: '🎉', color: '#af52de' },
-    { id: 'servicios', nombre: 'Servicios', emoji: '💡', color: '#ffcc00' },
-    { id: 'vivienda', nombre: 'Vivienda', emoji: '🏠', color: '#5856d6' },
-    { id: 'salud', nombre: 'Salud', emoji: '💊', color: '#ff3b30' },
-    { id: 'deudas', nombre: 'Deudas y cuotas', emoji: '💳', color: '#ff2d55' },
-    { id: 'educacion', nombre: 'Estudio', emoji: '📚', color: '#32ade6' },
-    { id: 'ropa', nombre: 'Ropa y cuidado', emoji: '👕', color: '#00c7be' },
-    { id: 'suscripciones', nombre: 'Suscripciones', emoji: '📺', color: '#30b0c7' },
-    { id: 'familia', nombre: 'Familia y regalos', emoji: '🎁', color: '#ff6482' },
-    { id: 'otros', nombre: 'Otros', emoji: '📦', color: '#8e8e93' },
+    { id: 'comida', nombre: 'Comida afuera', emoji: '🍔', color: '#e0893a' },
+    { id: 'hormiga', nombre: 'Gastos hormiga', emoji: '☕', color: '#a0785a' },
+    { id: 'transporte', nombre: 'Transporte', emoji: '🚌', color: '#4a7fb5' },
+    { id: 'mercado', nombre: 'Mercado', emoji: '🛒', color: '#3f8a5f' },
+    { id: 'salidas', nombre: 'Salidas y planes', emoji: '🎉', color: '#9a6bb3' },
+    { id: 'servicios', nombre: 'Servicios', emoji: '💡', color: '#d9b33b' },
+    { id: 'vivienda', nombre: 'Vivienda', emoji: '🏠', color: '#5a6bb0' },
+    { id: 'salud', nombre: 'Salud', emoji: '💊', color: '#d0453a' },
+    { id: 'deudas', nombre: 'Deudas y cuotas', emoji: '💳', color: '#c2507a' },
+    { id: 'educacion', nombre: 'Estudio', emoji: '📚', color: '#3d9bb3' },
+    { id: 'ropa', nombre: 'Ropa y cuidado', emoji: '👕', color: '#3fa392' },
+    { id: 'suscripciones', nombre: 'Suscripciones', emoji: '📺', color: '#6f86b8' },
+    { id: 'familia', nombre: 'Familia y regalos', emoji: '🎁', color: '#e07a8f' },
+    { id: 'otros', nombre: 'Otros', emoji: '📦', color: '#8a867c' },
   ];
   const CAT = Object.fromEntries(CATEGORIAS.map((c) => [c.id, c]));
 
@@ -1053,9 +1053,9 @@
   }
 
   function colorMov(m) {
-    if (m.tipo === 'ingreso') return '#34c759';
-    if (m.tipo === 'ahorro') return '#5ac8fa';
-    if (m.tipo === 'retiro') return '#8e8e93';
+    if (m.tipo === 'ingreso') return '#3f8a5f';
+    if (m.tipo === 'ahorro') return '#5b84c4';
+    if (m.tipo === 'retiro') return '#8a867c';
     return (CAT[m.categoria] || CAT.otros).color;
   }
 
@@ -1085,7 +1085,7 @@
         <button type="button" class="btn-icono" data-accion="periodo-anterior" aria-label="Ver el periodo anterior" ${atras ? '' : 'disabled'}>${ICONO.izq}</button>
         <div class="periodo-texto" title="${textoRango(p)}">
           <h2 class="periodo-nombre">${capital(nombrePeriodo(p))}</h2>
-          <p class="periodo-rango">${rango}${momento === 'actual' ? ' <span class="pill pill-bien">Ahora</span>' : ''}</p>
+          <p class="periodo-rango">${rango}${momento === 'actual' ? ' <span class="pill pill-amarilla">Ahora</span>' : ''}</p>
         </div>
         <button type="button" class="btn-icono" data-accion="periodo-siguiente" aria-label="Ver el periodo siguiente" ${adelante ? '' : 'disabled'}>${ICONO.der}</button>
       </div>
@@ -1183,7 +1183,7 @@
       <div class="hero-fila">
         <div class="hero-info">
           <p class="hero-etiqueta" id="hero-t">${etiqueta}</p>
-          <p class="hero-cifra"${nivel ? ` data-nivel="${nivel}"` : ''}>${cifra}</p>
+          <p class="hero-cifra"${nivel ? ` data-nivel="${nivel}"` : ''}>${nivel === 'mal' ? cifra : `<span class="resaltado">${cifra}</span>`}</p>
         </div>
         ${anillo(fraccion, estado, porciento, pie, '', `Te ${pie === 'sobró' ? 'sobró' : 'queda'} el ${porciento} de lo del día a día`)}
       </div>
@@ -1311,7 +1311,7 @@
     }
     const maximo = Math.max(...mostrar.map(([, v]) => v));
     const items = mostrar.map(([id, v]) => {
-      const cat = id ? CAT[id] || CAT.otros : { nombre: 'Otras categorías', emoji: '➕', color: '#8e8e93' };
+      const cat = id ? CAT[id] || CAT.otros : { nombre: 'Otras categorías', emoji: '➕', color: '#8a867c' };
       const pct = porcentaje(v, total);
       return `<li><button type="button" class="fila-cat" data-accion="ver-categoria" data-cat="${id}" aria-label="${esc(cat.nombre)}: ${plata(v)}, ${pct}% de tus gastos. Ver gastos">
         ${icoCat(cat.color, cat.emoji, ' ico-chico')}
@@ -1347,7 +1347,7 @@
     }
     return `<section class="tarjeta consejo r-consejo" aria-labelledby="t-consejo">
       <div class="consejo-fila">
-        ${icoCat('#ffcc00', '💡')}
+        ${icoCat('#d9b33b', '💡')}
         <div>
           <h2 class="consejo-titulo" id="t-consejo">Consejo</h2>
           <p>${esc(CONSEJOS[ui.consejo])}</p>
@@ -1473,7 +1473,7 @@
     let extra = '';
     if (tipo === 'ingreso') {
       const frec = FREC_INGRESO[x.frecuencia] || FREC_INGRESO.mensual;
-      color = '#34c759';
+      color = '#3f8a5f';
       emoji = '💼';
       titulo = x.nombre || 'Ingreso sin nombre';
       sub = x.monto && x.frecuencia !== 'mensual' ? `${frec.nombre} · ${plata(Math.round(x.monto * frec.porMes))} al mes` : frec.nombre;

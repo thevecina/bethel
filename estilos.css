@@ -1,43 +1,45 @@
 /* ==========================================================================
    Agente de Dinero — estilos
-   Estilo Apple: letra del sistema (San Francisco en iPhone y Mac), fondo gris
-   muy claro con tarjetas blancas, títulos grandes, listas como las de
-   Ajustes, hojas que suben desde abajo y anillos de progreso. Siempre en
-   blanco con verde. En el celular, pestañas abajo; en pantallas grandes,
-   menú lateral como en las apps de Mac.
+   Fondo crema, verde bosque y amarillo de resaltador, con títulos en letra
+   con serifa. Por dentro funciona como una app de iPhone: listas como las
+   de Ajustes, hojas que suben desde abajo y anillos de progreso. En el
+   celular, pestañas abajo; en pantallas grandes, menú lateral.
    ========================================================================== */
 
 :root {
   color-scheme: light;
 
   /* Colores */
-  --fondo: #f2f2f7;
+  --fondo: #faf8f2;              /* crema */
   --blanco: #ffffff;
-  --relleno: #f2f2f7;            /* campos y controles sobre blanco */
-  --relleno-fuerte: #e5e5ea;
-  --texto: #1c1c1e;
-  --texto-2: #6e6e73;
-  --separador: #e5e5ea;
-  --verde: #34c759;              /* verde de Apple: anillos, barras, iconos */
-  --verde-fuerte: #1f7a35;       /* verde para letras y botones (se lee bien) */
-  --verde-suave: #e3f6e8;
-  --naranja: #ff9500;
-  --naranja-texto: #c93400;
-  --naranja-suave: #fff2e0;
-  --rojo: #ff3b30;
-  --rojo-texto: #d70015;
-  --rojo-suave: #ffe9e7;
-  --azul: #007aff;
-  --azul-texto: #0062cc;
-  --azul-suave: #e5f0ff;
-  --gris-barra: #d1d1d6;
-  --vidrio: rgba(249, 249, 249, 0.82);
-  --sombra-flotante: 0 10px 28px rgba(31, 122, 53, 0.32), 0 2px 6px rgba(0, 0, 0, 0.08);
-  --sombra-hoja: 0 20px 60px rgba(0, 0, 0, 0.18);
+  --relleno: #f3f0e8;            /* campos y controles sobre blanco */
+  --relleno-fuerte: #e6e0d3;
+  --texto: #19201c;              /* casi negro verdoso */
+  --texto-2: #555d57;
+  --separador: #ece7dc;
+  --borde: #e9e3d6;              /* borde suave de las tarjetas */
+  --verde: #3f8a5f;              /* anillos, barras, iconos */
+  --verde-fuerte: #2c5c45;       /* verde bosque: botones y letras */
+  --verde-suave: #e5f2ea;
+  --verde-chequeo: #38774e;
+  --amarillo: #f8d45d;           /* resaltador */
+  --naranja: #e0893a;
+  --naranja-texto: #a34e0b;
+  --naranja-suave: #fbeedd;
+  --rojo: #d0453a;
+  --rojo-texto: #b3261e;
+  --rojo-suave: #f9e3df;
+  --azul: #5b84c4;
+  --azul-texto: #2f5f8f;
+  --azul-suave: #e6eef6;
+  --gris-barra: #ddd6c7;
+  --vidrio: rgba(250, 248, 242, 0.86);
+  --sombra-flotante: 0 10px 24px rgba(44, 92, 69, 0.28), 0 2px 6px rgba(25, 32, 28, 0.08);
+  --sombra-hoja: 0 20px 60px rgba(25, 32, 28, 0.18);
 
   /* Letras: las del sistema (San Francisco en Apple) */
   --letra: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --letra-titulos: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --letra-titulos: "Fraunces", Georgia, "Times New Roman", serif;
   --letra-numeros: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   /* Forma */
@@ -96,7 +98,27 @@ h2,
 h3 {
   margin: 0;
   font-family: var(--letra-titulos);
+  font-weight: 700;
   text-wrap: balance;
+}
+
+/* Resaltador amarillo, como subrayado con marcador */
+.resaltado {
+  padding: 0 0.06em;
+  background: linear-gradient(transparent 58%, var(--amarillo) 58%, var(--amarillo) 94%, transparent 94%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.insignia {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--amarillo);
+  color: var(--texto);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 p {
@@ -121,6 +143,22 @@ button {
 :focus-visible {
   outline: 3px solid var(--verde);
   outline-offset: 2px;
+}
+
+/* Tarjetas blancas con borde suave sobre el crema */
+.tarjeta,
+.lista,
+.tarjeta-lista,
+.vacio,
+.periodo,
+.mini,
+.aviso,
+.avisos-lista > .alerta {
+  border: 1px solid var(--borde);
+}
+
+.tarjeta .alerta {
+  border: 0;
 }
 
 /* Las hojas y sus áreas con scroll pueden recibir el foco: no se marcan */
@@ -164,7 +202,7 @@ dialog:focus-visible,
 /* ---------- Logo ---------- */
 
 .logo-fondo {
-  fill: var(--verde);
+  fill: var(--verde-fuerte);
   stroke: none;
 }
 
@@ -368,9 +406,9 @@ dialog:focus-visible,
 
 .titulo-grande {
   font-size: 34px;
-  font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -0.022em;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .subtitulo {
@@ -417,7 +455,7 @@ dialog:focus-visible,
 }
 
 .aviso-ejemplo {
-  background: var(--verde-suave);
+  background: var(--blanco);
 }
 
 .aviso-alerta {
@@ -435,10 +473,10 @@ dialog:focus-visible,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 44px;
-  padding: 0 20px;
+  min-height: 46px;
+  padding: 0 22px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 999px;
   font-size: 17px;
   font-weight: 600;
   text-decoration: none;
@@ -459,11 +497,13 @@ dialog:focus-visible,
 .btn-primario {
   background: var(--verde-fuerte);
   color: #ffffff;
+  box-shadow: 0 6px 16px rgba(44, 92, 69, 0.22);
 }
 
 .btn-sutil {
-  background: var(--verde-suave);
-  color: var(--verde-fuerte);
+  background: transparent;
+  color: var(--texto);
+  box-shadow: inset 0 0 0 1.5px var(--texto);
 }
 
 .btn-chico {
@@ -475,8 +515,7 @@ dialog:focus-visible,
 
 .btn-grande {
   width: 100%;
-  min-height: 52px;
-  border-radius: 14px;
+  min-height: 54px;
 }
 
 .btn-capsula {
@@ -508,8 +547,9 @@ dialog:focus-visible,
 }
 
 .btn-capsula-gris {
-  background: var(--relleno);
+  background: var(--blanco);
   color: var(--texto);
+  box-shadow: inset 0 0 0 1px var(--relleno-fuerte);
 }
 
 .btn-redondo {
@@ -610,6 +650,7 @@ dialog:focus-visible,
 .pill-ojo { background: var(--naranja-suave); color: var(--naranja-texto); }
 .pill-mal { background: var(--rojo-suave); color: var(--rojo-texto); }
 .pill-gris { background: var(--relleno); color: var(--texto-2); }
+.pill-amarilla { background: var(--amarillo); color: var(--texto); }
 
 .estado {
   color: var(--texto-2);
@@ -626,8 +667,8 @@ dialog:focus-visible,
   display: flex;
   gap: 2px;
   padding: 2px;
-  border-radius: 9px;
-  background: rgba(118, 118, 128, 0.12);
+  border-radius: 999px;
+  background: rgba(25, 32, 28, 0.07);
 }
 
 .segmento button {
@@ -635,7 +676,7 @@ dialog:focus-visible,
   min-height: 32px;
   padding: 0 10px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 999px;
   background: transparent;
   color: var(--texto);
   font-size: 13px;
@@ -704,7 +745,7 @@ dialog:focus-visible,
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: #f2f2f7;
+  background: #f3f0e8;
   background: color-mix(in srgb, var(--c, #8e8e93) 17%, #ffffff);
   font-size: 19px;
   line-height: 1;
@@ -833,7 +874,7 @@ dialog:focus-visible,
 .fila-chevron {
   width: 14px;
   height: 14px;
-  color: #c4c4c7;
+  color: #c4bdae;
   stroke-width: 2.6;
 }
 
@@ -1027,9 +1068,9 @@ dialog:focus-visible,
 
 .hero-cifra {
   margin: 4px 0 0;
-  font-family: var(--letra-numeros);
+  font-family: var(--letra-titulos);
   font-size: clamp(34px, 10.5vw, 48px);
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
@@ -1109,7 +1150,7 @@ dialog:focus-visible,
 
 .anillo-valor {
   fill: none;
-  stroke: var(--verde);
+  stroke: var(--verde-fuerte);
   stroke-width: 12;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease;
@@ -1188,7 +1229,7 @@ dialog:focus-visible,
 }
 
 .cuenta-total .cuenta-valor {
-  font-family: var(--letra-numeros);
+  font-family: var(--letra-titulos);
   font-size: 22px;
   font-weight: 700;
   color: var(--verde-fuerte);
@@ -1219,7 +1260,7 @@ dialog:focus-visible,
 }
 
 .tarjeta .alerta {
-  background: var(--relleno);
+  background: var(--fondo);
 }
 
 .alerta-icono {
@@ -1229,8 +1270,8 @@ dialog:focus-visible,
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--azul);
-  color: #ffffff;
+  background: var(--azul-suave);
+  color: var(--azul-texto);
 }
 
 .alerta-icono svg {
@@ -1239,9 +1280,9 @@ dialog:focus-visible,
   stroke-width: 3;
 }
 
-.alerta[data-nivel="bien"] .alerta-icono { background: var(--verde); }
-.alerta[data-nivel="ojo"] .alerta-icono { background: var(--naranja); }
-.alerta[data-nivel="mal"] .alerta-icono { background: var(--rojo); }
+.alerta[data-nivel="bien"] .alerta-icono { background: var(--verde-suave); color: var(--verde-chequeo); }
+.alerta[data-nivel="ojo"] .alerta-icono { background: var(--naranja-suave); color: var(--naranja-texto); }
+.alerta[data-nivel="mal"] .alerta-icono { background: var(--rojo-suave); color: var(--rojo-texto); }
 
 .alerta-cuerpo {
   flex: 1;
@@ -1494,7 +1535,7 @@ dialog:focus-visible,
 }
 
 .columna[data-actual] .columna-barra {
-  background: var(--verde);
+  background: var(--verde-fuerte);
 }
 
 .columna[data-actual] .columna-valor {
@@ -1583,7 +1624,7 @@ dialog:focus-visible,
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: var(--verde);
+  background: var(--verde-fuerte);
   color: #ffffff;
   font-family: var(--letra-numeros);
   font-size: 15px;
@@ -1620,10 +1661,10 @@ dialog:focus-visible,
   gap: 4px;
   min-height: 32px;
   padding: 0 12px 0 10px;
-  border: 0;
+  border: 1px solid var(--borde);
   border-radius: 16px;
   background: var(--blanco);
-  color: var(--verde-fuerte);
+  color: var(--texto);
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -1636,6 +1677,7 @@ dialog:focus-visible,
 .chip svg {
   width: 15px;
   height: 15px;
+  color: var(--verde-fuerte);
   stroke-width: 2.6;
 }
 
@@ -1757,8 +1799,8 @@ dialog:focus-visible,
 }
 
 .parte-fijos { background: var(--naranja); color: var(--texto); }
-.parte-ahorro { background: var(--azul); }
-.parte-libre { background: var(--verde); color: var(--texto); }
+.parte-ahorro { background: var(--azul); color: var(--texto); }
+.parte-libre { background: var(--verde); color: #ffffff; }
 
 .leyenda {
   display: flex;
@@ -1911,6 +1953,7 @@ dialog:focus-visible,
 
 .sugerida {
   margin-bottom: 14px;
+  border-color: transparent;
   background: var(--verde-suave);
 }
 
@@ -2079,7 +2122,7 @@ dialog:focus-visible,
 
 .monto-grande:focus-within {
   border-radius: var(--r-campo);
-  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.25);
+  box-shadow: 0 0 0 3px rgba(63, 138, 95, 0.35);
 }
 
 .monto-grande input::placeholder {
@@ -2148,7 +2191,7 @@ input::placeholder {
 input:focus-visible,
 select:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.35);
+  box-shadow: 0 0 0 3px rgba(63, 138, 95, 0.35);
 }
 
 .campo-plata {
@@ -2161,7 +2204,7 @@ select:focus-visible {
 }
 
 .campo-plata:focus-within {
-  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.35);
+  box-shadow: 0 0 0 3px rgba(63, 138, 95, 0.35);
 }
 
 .campo-plata > span {
@@ -2227,7 +2270,7 @@ select:focus-visible {
   width: 52px;
   height: 52px;
   border-radius: 16px;
-  background: #f2f2f7;
+  background: #f3f0e8;
   background: color-mix(in srgb, var(--c, #8e8e93) 17%, #ffffff);
   font-size: 25px;
   font-weight: 400;
@@ -2272,8 +2315,8 @@ select:focus-visible {
 
 .bienvenida h2 {
   margin-bottom: 10px;
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 800;
   letter-spacing: -0.015em;
   text-align: center;
 }
@@ -2296,7 +2339,7 @@ select:focus-visible {
   flex: none;
   width: 34px;
   height: 34px;
-  color: var(--verde);
+  color: var(--verde-fuerte);
   stroke-width: 1.9;
 }
 
@@ -2393,7 +2436,7 @@ select:focus-visible {
   max-width: min(420px, calc(100% - 32px));
   padding: 12px 12px 12px 18px;
   border-radius: 16px;
-  background: rgba(28, 28, 30, 0.94);
+  background: rgba(25, 32, 28, 0.95);
   color: #ffffff;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   font-size: 15px;
@@ -2413,7 +2456,7 @@ select:focus-visible {
   padding: 4px 8px;
   border: 0;
   background: none;
-  color: var(--verde);
+  color: var(--amarillo);
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
@@ -2545,8 +2588,8 @@ select:focus-visible {
     left: 0;
     width: var(--lateral);
     height: auto;
-    background: #fbfbfd;
-    border-right: 0.5px solid rgba(0, 0, 0, 0.12);
+    background: #f4f1e8;
+    border-right: 1px solid var(--borde);
   }
 
   .barra::before,
@@ -2568,8 +2611,9 @@ select:focus-visible {
     gap: 10px;
     margin: 0 6px 14px;
     color: var(--texto);
-    font-size: 17px;
-    font-weight: 700;
+    font-family: var(--letra-titulos);
+    font-size: 19px;
+    font-weight: 800;
     text-decoration: none;
   }
 
@@ -2695,7 +2739,11 @@ select:focus-visible {
   .btn-anotar:hover,
   .btn-capsula-fuerte:hover,
   .btn-redondo:hover {
-    background: #1a6a2e;
+    background: #244c39;
+  }
+
+  .btn-sutil:hover {
+    background: rgba(25, 32, 28, 0.04);
   }
 }
 

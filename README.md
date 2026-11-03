@@ -3,14 +3,15 @@
 Una página para organizar la plata del mes y de cada quincena.
 
 **Cómo abrirla:** abre `index.html` en el navegador (doble clic). No hay que instalar nada
-y funciona sin internet.
+y funciona sin internet (sin conexión, los títulos usan otra letra parecida).
 
 La primera vez sale una bienvenida: puedes **empezar con tus datos** o **ver un ejemplo**
 con números inventados para entender cómo funciona.
 
-El diseño sigue el estilo de Apple: letra del sistema, fondo blanco con verde, listas como
-las de Ajustes, hojas que suben desde abajo para anotar o editar, y anillos de progreso.
-En el celular las secciones van abajo; en el computador, en un menú a la izquierda.
+Diseño: fondo crema, verde bosque y amarillo de resaltador, con títulos en letra con serifa
+(Fraunces). Por dentro funciona como una app de iPhone: listas como las de Ajustes, hojas que
+suben desde abajo para anotar o editar, y anillos de progreso. En el celular las secciones van
+abajo; en el computador, en un menú a la izquierda.
 
 ## Qué hace
 
@@ -48,6 +49,6 @@ Si borras el historial del navegador o cambias de celular, se pierden; por eso e
 ## Archivos
 
 - `index.html`: la estructura de la página.
-- `estilos.css`: el diseño (blanco con verde, celular y computador).
+- `estilos.css`: el diseño (crema, verde y amarillo; celular y computador).
 - `app.js`: los cálculos y el guardado, con comentarios en español.
 - `manifest.webmanifest`, `sw.js` e `icono*`: lo necesario para instalarla como app y usarla sin internet.

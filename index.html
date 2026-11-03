@@ -7,7 +7,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Organiza tu plata por quincenas: lo que ganas, tus pagos fijos, tus gastos, tus metas y tus deudas.">
 <meta name="color-scheme" content="light">
-<meta name="theme-color" content="#f2f2f7">
+<meta name="theme-color" content="#faf8f2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,6 +15,9 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icono.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icono-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600..800&display=swap">
 <link rel="stylesheet" href="estilos.css">
 </head>
 
@@ -73,7 +76,7 @@
   <!-- Avisos: se muestran debajo del título de la sección abierta -->
   <div class="avisos" id="avisos">
     <div class="aviso aviso-ejemplo" id="aviso-ejemplo" hidden>
-      <p><strong>Esto es un ejemplo.</strong> Los números son inventados para que veas cómo funciona.</p>
+      <p><span class="insignia">Ejemplo</span> Los números son inventados para que veas cómo funciona.</p>
       <button type="button" class="btn-capsula btn-capsula-fuerte" data-accion="empezar">Empezar con mis datos</button>
     </div>
     <div class="aviso aviso-alerta" id="aviso-guardado" hidden>
@@ -235,7 +238,7 @@
       <circle cx="32" cy="32" r="18.5" class="logo-trazo"/>
       <path d="M24.5 41.5L32 24l7.5 17.5M27.2 35.5h9.6" class="logo-trazo"/>
     </svg>
-    <h2 id="bienvenida-titulo">Bienvenido a Agente de Dinero</h2>
+    <h2 id="bienvenida-titulo">Bienvenido a <span class="resaltado">Agente de Dinero</span></h2>
     <ul class="bienvenida-lista">
       <li>
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
