@@ -5,34 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Agente de Dinero</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Organiza tu plata por quincenas: lo que ganas, tus pagos fijos, tus gastos del día a día y tus metas de ahorro.">
-<meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#161313" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Organiza tu plata por quincenas: lo que ganas, tus pagos fijos, tus gastos, tus metas y tus deudas.">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f2f2f7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Agente">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icono.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icono-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
 <link rel="stylesheet" href="estilos.css">
 </head>
 
 <body>
 
-<header class="barra">
+<header class="barra" id="barra">
   <div class="barra-in">
-    <a class="marca" href="#resumen">
-      <svg class="marca-logo" viewBox="0 0 32 32" aria-hidden="true">
-        <circle class="logo-moneda" cx="16" cy="16" r="15"/>
-        <circle class="logo-borde" cx="16" cy="16" r="11.5"/>
-        <path class="logo-letra" d="M11.4 21.2L16 10.6l4.6 10.6M13.1 17.6h5.8"/>
+    <a class="marca" href="#resumen" aria-label="Agente de Dinero, ir al resumen">
+      <svg class="marca-logo" viewBox="0 0 64 64" aria-hidden="true">
+        <rect width="64" height="64" rx="15" class="logo-fondo"/>
+        <circle cx="32" cy="32" r="18.5" class="logo-trazo"/>
+        <path d="M24.5 41.5L32 24l7.5 17.5M27.2 35.5h9.6" class="logo-trazo"/>
       </svg>
       <span class="marca-nombre">Agente de Dinero</span>
     </a>
 
+    <p class="barra-titulo" id="barra-titulo" aria-hidden="true"></p>
+
+    <button type="button" class="btn-anotar" data-accion="anotar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Anotar gasto</span>
+    </button>
+
     <nav class="pestanas" aria-label="Secciones">
       <a class="pestana" href="#resumen" data-vista="resumen">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17a8.5 8.5 0 1 1 17 0"/><path d="M12 17l3.6-5.4"/><circle cx="12" cy="17" r="1.3"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 16.5a8.5 8.5 0 1 1 17 0"/><path d="M12 16.5l3.6-5.2"/><circle cx="12" cy="16.5" r="1.4"/></svg>
         <span>Resumen</span>
       </a>
       <a class="pestana" href="#gastos" data-vista="gastos">
@@ -48,50 +56,40 @@
         <span>Metas</span>
       </a>
       <a class="pestana" href="#deudas" data-vista="deudas">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg>
         <span>Deudas</span>
       </a>
     </nav>
-
-    <button type="button" class="btn btn-primario btn-anotar" data-accion="anotar">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      <span>Anotar gasto</span>
-    </button>
   </div>
 </header>
-
-<div class="aviso aviso-ejemplo" id="aviso-ejemplo" hidden>
-  <div class="aviso-in">
-    <p><strong>Esto es un ejemplo.</strong> Los números son inventados para que veas cómo funciona. Cuando quieras, empieza con los tuyos.</p>
-    <button type="button" class="btn btn-primario btn-chico" data-accion="empezar">Empezar con mis datos</button>
-  </div>
-</div>
-
-<div class="aviso aviso-alerta" id="aviso-guardado" hidden>
-  <div class="aviso-in">
-    <p id="aviso-guardado-texto">Este navegador no deja guardar tus datos. Antes de cerrar, descarga una copia desde <a href="#plan">Mi plan</a>.</p>
-  </div>
-</div>
-
-<div class="aviso aviso-pagos" id="aviso-pagos" hidden>
-  <div class="aviso-in">
-    <p id="aviso-pagos-texto"></p>
-    <a class="btn btn-sutil btn-chico" href="#resumen">Ver pagos</a>
-  </div>
-</div>
 
 <main class="contenido" id="contenido">
 
   <div class="cargando" id="cargando" role="status">
-    <span class="cargando-punto" aria-hidden="true"></span>
+    <span class="cargando-ruedita" aria-hidden="true"></span>
     <p>Cargando tus cuentas…</p>
+  </div>
+
+  <!-- Avisos: se muestran debajo del título de la sección abierta -->
+  <div class="avisos" id="avisos">
+    <div class="aviso aviso-ejemplo" id="aviso-ejemplo" hidden>
+      <p><strong>Esto es un ejemplo.</strong> Los números son inventados para que veas cómo funciona.</p>
+      <button type="button" class="btn-capsula btn-capsula-fuerte" data-accion="empezar">Empezar con mis datos</button>
+    </div>
+    <div class="aviso aviso-alerta" id="aviso-guardado" hidden>
+      <p id="aviso-guardado-texto">Este navegador no deja guardar tus datos. Antes de cerrar, descarga una copia desde Mi plan.</p>
+    </div>
+    <div class="aviso aviso-pagos" id="aviso-pagos" hidden>
+      <p id="aviso-pagos-texto"></p>
+      <a class="btn-capsula" href="#resumen">Ver pagos</a>
+    </div>
   </div>
 
   <!-- RESUMEN -->
   <section class="vista" id="vista-resumen" aria-labelledby="t-resumen" hidden>
     <div class="vista-cabeza">
-      <p class="saludo" id="saludo">Hola</p>
-      <h1 class="sr-only" id="t-resumen">Resumen</h1>
+      <p class="eyebrow" id="hoy-texto"></p>
+      <h1 class="titulo-grande" id="t-resumen">Resumen</h1>
     </div>
     <div class="periodo-control" data-periodo></div>
     <div id="resumen-cuerpo"></div>
@@ -100,8 +98,8 @@
   <!-- GASTOS -->
   <section class="vista" id="vista-gastos" aria-labelledby="t-gastos" hidden>
     <div class="vista-cabeza">
-      <h1 id="t-gastos">Gastos</h1>
-      <p>Todo lo que anotas: gastos, ingresos extra y lo que separas para tus metas.</p>
+      <h1 class="titulo-grande" id="t-gastos">Gastos</h1>
+      <p class="subtitulo">Todo lo que anotas, día por día.</p>
     </div>
     <div class="periodo-control" data-periodo></div>
     <div class="gastos-grid">
@@ -114,126 +112,84 @@
             <button type="button" role="radio" data-accion="filtro-tipo" data-tipo="ahorro">Ahorro</button>
           </div>
           <label class="sr-only" for="filtro-cat">Categoría</label>
-          <select id="filtro-cat" class="select-chico"></select>
+          <select id="filtro-cat" class="selector"></select>
         </div>
         <div id="gastos-cuerpo"></div>
       </div>
-      <aside class="gastos-aside" id="gastos-aside" aria-label="Totales del periodo"></aside>
+      <div class="gastos-aside" id="gastos-aside"></div>
     </div>
   </section>
 
   <!-- MI PLAN -->
   <section class="vista" id="vista-plan" aria-labelledby="t-plan" hidden>
     <div class="vista-cabeza">
-      <h1 id="t-plan">Mi plan</h1>
-      <p>Llénalo una vez y cámbialo cuando algo cambie. Con esto la página calcula cuánto puedes gastar cada quincena.</p>
+      <h1 class="titulo-grande" id="t-plan">Mi plan</h1>
+      <p class="subtitulo">Llénalo una vez y cámbialo cuando algo cambie. Con esto calculamos cuánto puedes gastar.</p>
     </div>
 
     <div class="plan-grid">
       <div class="plan-pasos">
 
-        <section class="tarjeta paso" aria-labelledby="t-paso-1">
-          <div class="paso-cabeza">
-            <span class="paso-num" aria-hidden="true">1</span>
-            <div>
-              <h2 id="t-paso-1">¿Cuánto ganas?</h2>
-              <p>Tu sueldo y cualquier otra plata que te entre seguido. Pon lo que recibes cada vez que te pagan.</p>
-            </div>
-          </div>
-          <div class="filas" id="lista-ingresos"></div>
-          <div class="paso-pie">
-            <button type="button" class="btn btn-sutil btn-chico" data-accion="agregar-ingreso">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-              Agregar ingreso
-            </button>
-            <p class="paso-total" id="total-ingresos"></p>
-          </div>
+        <section class="grupo" aria-labelledby="t-paso-1">
+          <h2 class="grupo-titulo" id="t-paso-1"><span class="paso-num" aria-hidden="true">1</span>¿Cuánto ganas?</h2>
+          <div class="lista" id="lista-ingresos"></div>
+          <p class="grupo-pie" id="pie-ingresos"></p>
         </section>
 
-        <section class="tarjeta paso" aria-labelledby="t-paso-2">
-          <div class="paso-cabeza">
-            <span class="paso-num" aria-hidden="true">2</span>
-            <div>
-              <h2 id="t-paso-2">¿Qué pagas sí o sí?</h2>
-              <p>Arriendo, servicios, cuotas, mercado… lo que pagas cada mes o cada quincena aunque no quieras.</p>
-            </div>
-          </div>
-          <div class="sugerencias" id="sugerencias-fijos" aria-label="Agregar rápido"></div>
-          <div class="filas" id="lista-fijos"></div>
-          <div class="paso-pie">
-            <button type="button" class="btn btn-sutil btn-chico" data-accion="agregar-fijo">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-              Agregar otro pago
-            </button>
-            <p class="paso-total" id="total-fijos"></p>
-          </div>
+        <section class="grupo" aria-labelledby="t-paso-2">
+          <h2 class="grupo-titulo" id="t-paso-2"><span class="paso-num" aria-hidden="true">2</span>¿Qué pagas sí o sí?</h2>
+          <div class="chips" id="sugerencias-fijos" aria-label="Agregar rápido"></div>
+          <div class="lista" id="lista-fijos"></div>
+          <p class="grupo-pie" id="pie-fijos"></p>
         </section>
 
-        <section class="tarjeta paso" aria-labelledby="t-paso-3">
-          <div class="paso-cabeza">
-            <span class="paso-num" aria-hidden="true">3</span>
-            <div>
-              <h2 id="t-paso-3">¿Cuánto vas a ahorrar?</h2>
-              <p>Sepáralo apenas te paguen, antes de gastar. Empieza con 10%; si no alcanza, con 5% también se puede.</p>
-            </div>
-          </div>
-          <div class="ahorro-control">
-            <label for="ahorro-pct">Porcentaje de lo que ganas</label>
+        <section class="grupo" aria-labelledby="t-paso-3">
+          <h2 class="grupo-titulo" id="t-paso-3"><span class="paso-num" aria-hidden="true">3</span>¿Cuánto vas a ahorrar?</h2>
+          <div class="tarjeta ahorro-control">
             <div class="ahorro-fila">
+              <label class="sr-only" for="ahorro-pct">Porcentaje de lo que ganas</label>
               <input type="range" id="ahorro-pct" min="0" max="40" step="1" value="10">
               <output id="ahorro-valor" for="ahorro-pct">10%</output>
             </div>
             <p class="ahorro-salida" id="ahorro-salida"></p>
           </div>
+          <p class="grupo-pie">Sepáralo apenas te paguen, antes de gastar. Empieza con 10%; si no alcanza, con 5% también se puede.</p>
         </section>
 
-        <section class="tarjeta paso" aria-labelledby="t-paso-4">
-          <div class="paso-cabeza">
-            <span class="paso-num" aria-hidden="true">4</span>
-            <div>
-              <h2 id="t-paso-4">¿Le pones tope a algo? <span class="opcional">(opcional)</span></h2>
-              <p>Un máximo al mes para lo que más se te va, como comida afuera o gastos hormiga. Te avisamos cuando vayas llegando.</p>
-            </div>
-          </div>
-          <div class="sugerencias" id="sugerencias-topes" aria-label="Agregar rápido"></div>
-          <div class="filas" id="lista-topes"></div>
-          <div class="paso-pie">
-            <button type="button" class="btn btn-sutil btn-chico" data-accion="agregar-tope">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-              Agregar tope
-            </button>
-          </div>
+        <section class="grupo" aria-labelledby="t-paso-4">
+          <h2 class="grupo-titulo" id="t-paso-4"><span class="paso-num" aria-hidden="true">4</span>Topes <span class="opcional">(opcional)</span></h2>
+          <div class="chips" id="sugerencias-topes" aria-label="Agregar rápido"></div>
+          <div class="lista" id="lista-topes"></div>
+          <p class="grupo-pie">Un máximo al mes para lo que más se te va. Te avisamos cuando vayas llegando.</p>
         </section>
       </div>
 
       <aside class="plan-resultado">
         <section class="tarjeta" aria-labelledby="t-reparto">
-          <h2 id="t-reparto">Así se reparte tu plata</h2>
+          <h2 class="tarjeta-titulo" id="t-reparto">Así se reparte tu plata</h2>
           <div id="reparto"></div>
         </section>
         <section class="tarjeta" aria-labelledby="t-diagnostico">
-          <h2 id="t-diagnostico">¿Cómo va tu plan?</h2>
+          <h2 class="tarjeta-titulo" id="t-diagnostico">¿Cómo va tu plan?</h2>
           <ul class="avisos-lista" id="diagnostico"></ul>
         </section>
       </aside>
     </div>
 
-    <section class="tarjeta datos" aria-labelledby="t-datos">
-      <h2 id="t-datos">Tus datos</h2>
-      <p class="datos-donde" id="datos-donde"></p>
-      <div class="datos-grid">
-        <div class="campo">
-          <label for="nombre">¿Cómo te llamas? <span class="opcional">(opcional)</span></label>
-          <input type="text" id="nombre" maxlength="30" autocomplete="given-name" placeholder="Para saludarte">
+    <section class="grupo datos" aria-labelledby="t-datos">
+      <h2 class="grupo-titulo" id="t-datos">Tus datos</h2>
+      <div class="lista">
+        <div class="fila fila-campo">
+          <label for="nombre">Tu nombre</label>
+          <input type="text" id="nombre" maxlength="30" autocomplete="given-name" placeholder="Opcional">
         </div>
-        <div class="datos-botones">
-          <button type="button" class="btn btn-sutil" data-accion="calendario" id="btn-calendario">Recordatorios para mi calendario</button>
-          <button type="button" class="btn btn-sutil" data-accion="exportar" id="btn-exportar">Descargar una copia</button>
-          <label class="btn btn-sutil" for="importar-archivo">Restaurar una copia</label>
-          <input type="file" id="importar-archivo" class="sr-only" accept="application/json,.json">
-          <button type="button" class="btn btn-peligro" data-accion="borrar-todo">Borrar todo</button>
-        </div>
+        <button type="button" class="fila fila-accion" data-accion="calendario" id="btn-calendario">Recordatorios para mi calendario</button>
+        <button type="button" class="fila fila-accion" data-accion="exportar" id="btn-exportar">Descargar una copia</button>
+        <label class="fila fila-accion" for="importar-archivo">Restaurar una copia</label>
+        <input type="file" id="importar-archivo" class="sr-only" accept="application/json,.json">
+        <button type="button" class="fila fila-accion fila-peligro" data-accion="borrar-todo">Borrar todo</button>
       </div>
+      <p class="grupo-pie" id="datos-donde"></p>
     </section>
   </section>
 
@@ -241,12 +197,11 @@
   <section class="vista" id="vista-metas" aria-labelledby="t-metas" hidden>
     <div class="vista-cabeza vista-cabeza-accion">
       <div>
-        <h1 id="t-metas">Metas de ahorro</h1>
-        <p>Ponle nombre a lo que quieres lograr. Una plata con nombre es más difícil de gastar.</p>
+        <h1 class="titulo-grande" id="t-metas">Metas</h1>
+        <p class="subtitulo">Ponle nombre a lo que quieres lograr. Una plata con nombre es más difícil de gastar.</p>
       </div>
-      <button type="button" class="btn btn-primario" data-accion="nueva-meta">
+      <button type="button" class="btn-redondo" data-accion="nueva-meta" aria-label="Nueva meta">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        Nueva meta
       </button>
     </div>
     <div id="metas-cuerpo"></div>
@@ -256,12 +211,11 @@
   <section class="vista" id="vista-deudas" aria-labelledby="t-deudas" hidden>
     <div class="vista-cabeza vista-cabeza-accion">
       <div>
-        <h1 id="t-deudas">Deudas</h1>
-        <p>Anota lo que debes: tarjetas, créditos, préstamos. Te decimos cuándo terminas y por cuál empezar.</p>
+        <h1 class="titulo-grande" id="t-deudas">Deudas</h1>
+        <p class="subtitulo">Tarjetas, créditos, préstamos. Te decimos cuándo terminas y por cuál empezar.</p>
       </div>
-      <button type="button" class="btn btn-primario" data-accion="nueva-deuda">
+      <button type="button" class="btn-redondo" data-accion="nueva-deuda" aria-label="Agregar deuda">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        Agregar deuda
       </button>
     </div>
     <div id="deudas-cuerpo"></div>
@@ -273,28 +227,57 @@
   <p>Agente de Dinero · Tus datos se guardan en <span data-donde>este navegador</span> y no se envían a ningún lado.</p>
 </footer>
 
-<!-- DIÁLOGO: ANOTAR GASTO / INGRESO / PAGO -->
-<dialog class="dialogo" id="dlg-mov" aria-labelledby="dlg-mov-titulo">
-  <form class="dialogo-form" id="form-mov" novalidate>
-    <div class="dialogo-cabeza">
-      <h2 id="dlg-mov-titulo">Anotar gasto</h2>
-      <button type="button" class="btn-icono" data-accion="cerrar-dialogo" aria-label="Cerrar">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+<!-- HOJA: BIENVENIDA -->
+<dialog class="hoja hoja-bienvenida" id="dlg-bienvenida" aria-labelledby="bienvenida-titulo">
+  <div class="bienvenida">
+    <svg class="bienvenida-logo" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="15" class="logo-fondo"/>
+      <circle cx="32" cy="32" r="18.5" class="logo-trazo"/>
+      <path d="M24.5 41.5L32 24l7.5 17.5M27.2 35.5h9.6" class="logo-trazo"/>
+    </svg>
+    <h2 id="bienvenida-titulo">Bienvenido a Agente de Dinero</h2>
+    <ul class="bienvenida-lista">
+      <li>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+        <div><strong>Tu plata por quincenas</strong><p>Cuéntanos cuánto ganas y qué pagas. Te decimos cuánto puedes gastar cada día.</p></div>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+        <div><strong>Sin olvidar pagos</strong><p>Te avisamos qué vence y marcas lo que ya pagaste.</p></div>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
+        <div><strong>Metas y deudas</strong><p>Ahorra para lo que quieres y sal de deudas más rápido.</p></div>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>
+        <div><strong>Privado</strong><p id="bienvenida-privado">Tus datos se guardan solo en este navegador. Nadie más los ve.</p></div>
+      </li>
+    </ul>
+    <button type="button" class="btn btn-primario btn-grande" data-accion="empezar">Empezar con mis datos</button>
+    <button type="button" class="enlace enlace-centrado" data-accion="ver-ejemplo">Ver un ejemplo primero</button>
+  </div>
+</dialog>
+
+<!-- HOJA: ANOTAR GASTO / INGRESO / PAGO -->
+<dialog class="hoja" id="dlg-mov" aria-labelledby="dlg-mov-titulo">
+  <form class="hoja-form" id="form-mov" novalidate>
+    <div class="hoja-cabeza">
+      <button type="button" class="hoja-boton" data-accion="cerrar-dialogo">Cancelar</button>
+      <h2 class="hoja-titulo" id="dlg-mov-titulo">Anotar gasto</h2>
+      <button type="submit" class="hoja-boton hoja-boton-fuerte" id="mov-guardar">Guardar</button>
     </div>
-    <div class="dialogo-cuerpo">
-      <div class="segmento segmento-ancho" role="radiogroup" aria-label="Tipo" id="mov-tipo">
+    <div class="hoja-cuerpo">
+      <div class="segmento" role="radiogroup" aria-label="Tipo" id="mov-tipo">
         <button type="button" role="radio" data-accion="mov-tipo" data-tipo="gasto">Gasto</button>
         <button type="button" role="radio" data-accion="mov-tipo" data-tipo="ingreso">Ingreso extra</button>
       </div>
-      <p class="nota-pago" id="mov-fijo-info" hidden></p>
+      <p class="nota-hoja" id="mov-fijo-info" hidden></p>
 
-      <div class="campo">
-        <label for="mov-monto">¿Cuánto?</label>
-        <div class="campo-plata campo-plata-grande">
-          <span aria-hidden="true">$</span>
-          <input type="text" id="mov-monto" inputmode="numeric" autocomplete="off" placeholder="0" data-monto>
-        </div>
+      <div class="monto-grande">
+        <label class="sr-only" for="mov-monto">¿Cuánto?</label>
+        <span aria-hidden="true">$</span>
+        <input type="text" id="mov-monto" inputmode="numeric" autocomplete="off" placeholder="0" data-monto data-autoancho>
       </div>
 
       <fieldset class="campo" id="mov-categorias">
@@ -313,28 +296,63 @@
         </div>
       </div>
       <p class="error" id="mov-error" role="alert" hidden></p>
-    </div>
-    <div class="dialogo-pie">
-      <button type="button" class="btn btn-peligro-texto" data-accion="eliminar-mov" id="mov-eliminar" hidden>Eliminar</button>
-      <button type="submit" class="btn btn-primario" id="mov-guardar">Guardar</button>
+      <button type="button" class="btn-eliminar" data-accion="eliminar-mov" id="mov-eliminar" hidden>Eliminar</button>
     </div>
   </form>
 </dialog>
 
-<!-- DIÁLOGO: META -->
-<dialog class="dialogo" id="dlg-meta" aria-labelledby="dlg-meta-titulo">
-  <form class="dialogo-form" id="form-meta" novalidate>
-    <div class="dialogo-cabeza">
-      <h2 id="dlg-meta-titulo">Nueva meta</h2>
-      <button type="button" class="btn-icono" data-accion="cerrar-dialogo" aria-label="Cerrar">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+<!-- HOJA: INGRESO, PAGO FIJO O TOPE DEL PLAN -->
+<dialog class="hoja" id="dlg-item" aria-labelledby="dlg-item-titulo">
+  <form class="hoja-form" id="form-item" novalidate>
+    <div class="hoja-cabeza">
+      <button type="button" class="hoja-boton" data-accion="cerrar-dialogo">Cancelar</button>
+      <h2 class="hoja-titulo" id="dlg-item-titulo">Ingreso</h2>
+      <button type="submit" class="hoja-boton hoja-boton-fuerte" id="item-guardar">Guardar</button>
     </div>
-    <div class="dialogo-cuerpo">
+    <div class="hoja-cuerpo">
+      <div class="campo" id="item-nombre-campo">
+        <label for="item-nombre" id="item-nombre-label">Nombre</label>
+        <input type="text" id="item-nombre" maxlength="40">
+      </div>
+      <div class="campo" id="item-cat-campo">
+        <label for="item-cat">Categoría</label>
+        <select id="item-cat"></select>
+      </div>
+      <div class="campo">
+        <label for="item-monto" id="item-monto-label">¿Cuánto?</label>
+        <div class="campo-plata">
+          <span aria-hidden="true">$</span>
+          <input type="text" id="item-monto" inputmode="numeric" autocomplete="off" placeholder="0" data-monto>
+        </div>
+      </div>
+      <div class="campo" id="item-frec-campo">
+        <span class="campo-etiqueta" id="item-frec-label">¿Cada cuánto?</span>
+        <div class="segmento" role="radiogroup" aria-labelledby="item-frec-label" id="item-frec"></div>
+      </div>
+      <div class="campo" id="item-dia-campo">
+        <label for="item-dia">Día de pago</label>
+        <input type="number" id="item-dia" min="1" max="31" step="1" inputmode="numeric">
+      </div>
+      <p class="nota-hoja" id="item-ayuda"></p>
+      <p class="error" id="item-error" role="alert" hidden></p>
+      <button type="button" class="btn-eliminar" data-accion="eliminar-item" id="item-eliminar" hidden>Quitar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- HOJA: META -->
+<dialog class="hoja" id="dlg-meta" aria-labelledby="dlg-meta-titulo">
+  <form class="hoja-form" id="form-meta" novalidate>
+    <div class="hoja-cabeza">
+      <button type="button" class="hoja-boton" data-accion="cerrar-dialogo">Cancelar</button>
+      <h2 class="hoja-titulo" id="dlg-meta-titulo">Nueva meta</h2>
+      <button type="submit" class="hoja-boton hoja-boton-fuerte" id="meta-guardar">Guardar</button>
+    </div>
+    <div class="hoja-cuerpo">
       <div class="campo">
         <label for="meta-nombre">¿Para qué estás ahorrando?</label>
         <input type="text" id="meta-nombre" maxlength="40" placeholder="Ej: Fondo de emergencia">
-        <div class="sugerencias sugerencias-chicas" id="meta-sugerencias"></div>
+        <div class="chips chips-chicas" id="meta-sugerencias"></div>
       </div>
       <div class="campos-2">
         <div class="campo">
@@ -357,59 +375,49 @@
         <input type="date" id="meta-fecha">
       </div>
       <p class="error" id="meta-error" role="alert" hidden></p>
-    </div>
-    <div class="dialogo-pie">
-      <button type="button" class="btn btn-peligro-texto" data-accion="eliminar-meta" id="meta-eliminar" hidden>Eliminar meta</button>
-      <button type="submit" class="btn btn-primario">Guardar</button>
+      <button type="button" class="btn-eliminar" data-accion="eliminar-meta" id="meta-eliminar" hidden>Borrar meta</button>
     </div>
   </form>
 </dialog>
 
-<!-- DIÁLOGO: ABONAR / SACAR DE UNA META -->
-<dialog class="dialogo" id="dlg-abono" aria-labelledby="dlg-abono-titulo">
-  <form class="dialogo-form" id="form-abono" novalidate>
-    <div class="dialogo-cabeza">
-      <h2 id="dlg-abono-titulo">Abonar</h2>
-      <button type="button" class="btn-icono" data-accion="cerrar-dialogo" aria-label="Cerrar">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+<!-- HOJA: ABONAR O SACAR DE UNA META -->
+<dialog class="hoja" id="dlg-abono" aria-labelledby="dlg-abono-titulo">
+  <form class="hoja-form" id="form-abono" novalidate>
+    <div class="hoja-cabeza">
+      <button type="button" class="hoja-boton" data-accion="cerrar-dialogo">Cancelar</button>
+      <h2 class="hoja-titulo" id="dlg-abono-titulo">Abonar</h2>
+      <button type="submit" class="hoja-boton hoja-boton-fuerte" id="abono-guardar">Guardar</button>
     </div>
-    <div class="dialogo-cuerpo">
-      <div class="segmento segmento-ancho" role="radiogroup" aria-label="¿Qué quieres hacer?">
+    <div class="hoja-cuerpo">
+      <div class="segmento" role="radiogroup" aria-label="¿Qué quieres hacer?">
         <button type="button" role="radio" data-accion="abono-modo" data-modo="ahorro">Abonar</button>
         <button type="button" role="radio" data-accion="abono-modo" data-modo="retiro">Sacar</button>
       </div>
-      <div class="campo">
-        <label for="abono-monto">¿Cuánto?</label>
-        <div class="campo-plata campo-plata-grande">
-          <span aria-hidden="true">$</span>
-          <input type="text" id="abono-monto" inputmode="numeric" autocomplete="off" placeholder="0" data-monto>
-        </div>
-        <p class="ayuda" id="abono-ayuda"></p>
+      <div class="monto-grande">
+        <label class="sr-only" for="abono-monto">¿Cuánto?</label>
+        <span aria-hidden="true">$</span>
+        <input type="text" id="abono-monto" inputmode="numeric" autocomplete="off" placeholder="0" data-monto data-autoancho>
       </div>
+      <p class="nota-hoja nota-centrada" id="abono-ayuda"></p>
       <div class="campo">
         <label for="abono-fecha">Fecha</label>
         <input type="date" id="abono-fecha">
       </div>
       <p class="error" id="abono-error" role="alert" hidden></p>
-    </div>
-    <div class="dialogo-pie">
-      <button type="button" class="btn btn-peligro-texto" data-accion="eliminar-abono" id="abono-eliminar" hidden>Eliminar</button>
-      <button type="submit" class="btn btn-primario">Guardar</button>
+      <button type="button" class="btn-eliminar" data-accion="eliminar-abono" id="abono-eliminar" hidden>Eliminar</button>
     </div>
   </form>
 </dialog>
 
-<!-- DIÁLOGO: DEUDA -->
-<dialog class="dialogo" id="dlg-deuda" aria-labelledby="dlg-deuda-titulo">
-  <form class="dialogo-form" id="form-deuda" novalidate>
-    <div class="dialogo-cabeza">
-      <h2 id="dlg-deuda-titulo">Agregar deuda</h2>
-      <button type="button" class="btn-icono" data-accion="cerrar-dialogo" aria-label="Cerrar">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+<!-- HOJA: DEUDA -->
+<dialog class="hoja" id="dlg-deuda" aria-labelledby="dlg-deuda-titulo">
+  <form class="hoja-form" id="form-deuda" novalidate>
+    <div class="hoja-cabeza">
+      <button type="button" class="hoja-boton" data-accion="cerrar-dialogo">Cancelar</button>
+      <h2 class="hoja-titulo" id="dlg-deuda-titulo">Agregar deuda</h2>
+      <button type="submit" class="hoja-boton hoja-boton-fuerte" id="deuda-guardar">Guardar</button>
     </div>
-    <div class="dialogo-cuerpo">
+    <div class="hoja-cuerpo">
       <div class="campo">
         <label for="deuda-nombre">¿Qué deuda es?</label>
         <input type="text" id="deuda-nombre" maxlength="40" placeholder="Ej: Tarjeta de crédito">
@@ -441,24 +449,21 @@
       </div>
       <p class="ayuda">El interés efectivo anual (E.A.) sale en el extracto. Si no lo sabes, déjalo vacío.</p>
       <p class="error" id="deuda-error" role="alert" hidden></p>
-    </div>
-    <div class="dialogo-pie">
-      <button type="button" class="btn btn-peligro-texto" data-accion="eliminar-deuda" id="deuda-eliminar" hidden>Borrar deuda</button>
-      <button type="submit" class="btn btn-primario">Guardar</button>
+      <button type="button" class="btn-eliminar" data-accion="eliminar-deuda" id="deuda-eliminar" hidden>Borrar deuda</button>
     </div>
   </form>
 </dialog>
 
-<!-- DIÁLOGO: CONFIRMAR -->
-<dialog class="dialogo dialogo-chico" id="dlg-confirmar" aria-labelledby="conf-titulo" aria-describedby="conf-texto">
-  <form class="dialogo-form" method="dialog">
-    <div class="dialogo-cuerpo">
+<!-- ALERTA: CONFIRMAR -->
+<dialog class="alerta-ios" id="dlg-confirmar" aria-labelledby="conf-titulo" aria-describedby="conf-texto">
+  <form method="dialog">
+    <div class="alerta-ios-cuerpo">
       <h2 id="conf-titulo">¿Seguro?</h2>
       <p id="conf-texto"></p>
     </div>
-    <div class="dialogo-pie">
-      <button type="submit" class="btn btn-sutil" value="no">Cancelar</button>
-      <button type="submit" class="btn btn-peligro" value="si" id="conf-si">Sí, borrar</button>
+    <div class="alerta-ios-botones">
+      <button type="submit" class="alerta-ios-boton" value="no">Cancelar</button>
+      <button type="submit" class="alerta-ios-boton alerta-ios-peligro" value="si" id="conf-si">Sí, borrar</button>
     </div>
   </form>
 </dialog>

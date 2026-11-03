@@ -2,15 +2,19 @@
 
 Una página para organizar la plata del mes y de cada quincena.
 
-**Cómo abrirla:** abre `index.html` en el navegador (doble clic). No hay que instalar nada.
-Sin internet también funciona; solo cambia el tipo de letra.
+**Cómo abrirla:** abre `index.html` en el navegador (doble clic). No hay que instalar nada
+y funciona sin internet.
 
-La primera vez muestra un **ejemplo con números inventados** para que veas cómo funciona.
-Cuando quieras, toca **Empezar con mis datos**.
+La primera vez sale una bienvenida: puedes **empezar con tus datos** o **ver un ejemplo**
+con números inventados para entender cómo funciona.
+
+El diseño sigue el estilo de Apple: letra del sistema, fondo blanco con verde, listas como
+las de Ajustes, hojas que suben desde abajo para anotar o editar, y anillos de progreso.
+En el celular las secciones van abajo; en el computador, en un menú a la izquierda.
 
 ## Qué hace
 
-- **Mi plan**: lo que ganas (quincenal, mensual o semanal), lo que pagas sí o sí con su día de
+- **Mi plan**: tocas cada cosa para editarla. Lo que ganas (quincenal, mensual o semanal), lo que pagas sí o sí con su día de
   pago, qué porcentaje vas a ahorrar y, si quieres, un tope al mes para lo que más se te va
   (comida afuera, gastos hormiga…). Calcula cuánto te queda para el día a día en cada quincena
   y por día, y cuánto apartar de una quincena para los pagos grandes de la otra.
@@ -44,6 +48,6 @@ Si borras el historial del navegador o cambias de celular, se pierden; por eso e
 ## Archivos
 
 - `index.html`: la estructura de la página.
-- `estilos.css`: el diseño (modo claro y oscuro, celular y computador).
+- `estilos.css`: el diseño (blanco con verde, celular y computador).
 - `app.js`: los cálculos y el guardado, con comentarios en español.
 - `manifest.webmanifest`, `sw.js` e `icono*`: lo necesario para instalarla como app y usarla sin internet.
