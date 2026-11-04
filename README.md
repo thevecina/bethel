@@ -37,14 +37,25 @@ abajo; en el computador, en un menú a la izquierda.
 2. En *Branch* elige `main` y la carpeta `/ (root)`, y toca **Save**.
 3. En un par de minutos GitHub te da una dirección (algo como
    `https://TU-USUARIO.github.io/NOMBRE-DEL-REPOSITORIO/`).
-4. Ábrela en el celular y elige **Agregar a la pantalla de inicio**. Queda con su icono y
-   funciona sin internet.
+4. Ábrela en el celular e instálala:
+   - **iPhone:** en **Safari** toca **Compartir** (si no lo ves, está en el menú ···) y elige
+     **Agregar a inicio**.
+   - **Android:** en **Chrome** toca el menú ⋮ y elige **Instalar app** o
+     **Agregar a la pantalla principal**.
+
+   Queda con su icono, se abre como una app y funciona sin internet.
+
+En iPhone vale la pena instalarla: si la usas solo desde Safari y pasas días sin abrirla,
+Safari puede borrar lo que la página tiene guardado. Instalada no pasa. La página te lo
+recuerda con un aviso en el Resumen (lo puedes cerrar con «Ahora no»).
 
 ## Tus datos
 
 Se guardan **solo en tu navegador** (localStorage) y no se envían a ningún lado.
 Si borras el historial del navegador o cambias de celular, se pierden; por eso en
 *Mi plan → Tus datos* puedes **descargar una copia** (.json) y **restaurarla** donde quieras.
+En iPhone, *Descargar una copia* abre la hoja de **Compartir**: la puedes guardar en Archivos
+o iCloud, o mandártela por WhatsApp o correo.
 
 ## Archivos
 

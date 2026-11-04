@@ -1,6 +1,6 @@
 /* Agente de Dinero: permite abrir la página sin internet.
    Siempre intenta traer la versión nueva; si no hay conexión, usa la guardada. */
-const CACHE = 'agente-de-dinero-v3';
+const CACHE = 'agente-de-dinero-v4';
 const ARCHIVOS = ['./', './index.html', './estilos.css', './app.js', './manifest.webmanifest', './icono.svg', './icono-192.png', './icono-512.png', './icono-180.png'];
 
 self.addEventListener('install', (e) => {

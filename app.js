@@ -891,6 +891,49 @@
     return lista.slice().sort((x, y) => y.fecha.localeCompare(x.fecha) || orden.get(y) - orden.get(x));
   }
 
+  /* ───────────────────────────── iPhone ──────────────────────────────── */
+
+  const LLAVE_INSTALAR = 'agente-de-dinero:instalar-oculto';
+  let instalarOcultoAhora = false;
+
+  function esIOS() {
+    return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  // Abierta desde el ícono de la pantalla de inicio, no desde Safari.
+  function enModoApp() {
+    return navigator.standalone === true || (!!window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  }
+
+  function instalarOculto() {
+    if (instalarOcultoAhora) return true;
+    try {
+      return localStorage.getItem(LLAVE_INSTALAR) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Safari borra lo guardado por una página si pasas días sin abrirla; instalada, no.
+  function renderAvisoInstalar() {
+    $('#aviso-instalar').hidden = !(esIOS() && !enModoApp() && !window.CUENTAS_CLARAS_ALMACEN
+      && !datos.ejemplo && ui.vista === 'resumen' && !instalarOculto());
+  }
+
+  // En iPhone, la hoja de Compartir deja guardar la copia en Archivos o iCloud, o mandarla por WhatsApp o correo.
+  // Devuelve true si se compartió, 'cancelado' si la cerraste y null si toca descargarla.
+  async function compartirArchivo(nombre, texto) {
+    if (!esIOS() || typeof File !== 'function' || !navigator.canShare || !navigator.share) return null;
+    const archivo = new File([texto], nombre, { type: 'application/json' });
+    if (!navigator.canShare({ files: [archivo] })) return null;
+    try {
+      await navigator.share({ files: [archivo] });
+      return true;
+    } catch (e) {
+      return e && e.name === 'AbortError' ? 'cancelado' : null;
+    }
+  }
+
   /* ───────────────────────────── Guardado ─────────────────────────────── */
 
   function descargarConEnlace(nombre, texto) {
@@ -1192,6 +1235,18 @@
     </section>`;
   }
 
+  // La cifra grande va en una sola línea: si no cabe, se achica la letra en vez de partir el número.
+  function encajarCifras() {
+    for (const el of $$('.hero-cifra')) {
+      el.style.fontSize = '';
+      const ancho = el.clientWidth;
+      const necesita = el.scrollWidth;
+      if (!ancho || necesita <= ancho) continue;
+      const tam = parseFloat(getComputedStyle(el).fontSize);
+      el.style.fontSize = `${Math.max(20, Math.floor((tam * ancho) / necesita) - 1)}px`;
+    }
+  }
+
   function htmlHeroSinPlan() {
     return `<section class="tarjeta hero hero-vacio r-hero" aria-labelledby="hero-t">
       ${LOGO}
@@ -1375,6 +1430,7 @@
           ${htmlConsejo()}
         </div>
       </div>`;
+    encajarCifras();
   }
 
   /* ────────────────────────────── Gastos ──────────────────────────────── */
@@ -1610,6 +1666,7 @@
     $('#diagnostico').innerHTML = calcularDiagnostico().map(htmlAviso).join('');
     $('#datos-donde').textContent = almacen.donde === 'este navegador'
       ? 'Tus datos se guardan solo en este navegador. Si borras el historial o cambias de celular, se pierden: descarga una copia de vez en cuando.'
+        + (esIOS() && !enModoApp() ? ' En iPhone, instálala desde Safari con Compartir › «Agregar a inicio» para que Safari no los borre si pasas días sin abrirla.' : '')
       : `Tus datos se guardan en ${almacen.donde}. También puedes descargar una copia.`;
   }
 
@@ -2074,6 +2131,7 @@
   function renderVista() {
     $('#aviso-ejemplo').hidden = !datos.ejemplo;
     renderAvisoPagos();
+    renderAvisoInstalar();
     for (const el of $$('[data-donde]')) el.textContent = almacen.donde;
     renderSaludo();
     if (ui.vista === 'resumen' || ui.vista === 'gastos') {
@@ -2489,8 +2547,19 @@
     const nombre = `agente-de-dinero-${hoyISO()}.json`;
     let ok = false;
     try {
-      const descargar = window.CUENTAS_CLARAS_DESCARGAR || almacen.descargar || descargarConEnlace;
-      ok = await descargar(nombre, texto);
+      // La plataforma (claude.ai) trae su propia forma de bajar archivos; si no, en iPhone se usa Compartir.
+      const propia = window.CUENTAS_CLARAS_DESCARGAR || (almacen === almacenLocal ? null : almacen.descargar);
+      if (propia) {
+        ok = await propia(nombre, texto);
+      } else {
+        const compartida = await compartirArchivo(nombre, texto);
+        if (compartida === 'cancelado') return;
+        if (compartida === true) {
+          notificar('Copia guardada');
+          return;
+        }
+        ok = descargarConEnlace(nombre, texto);
+      }
     } catch (e) {
       ok = false;
     }
@@ -2636,6 +2705,16 @@
       else irA('metas');
     },
     empezar: () => empezarDeCero(),
+    'ocultar-instalar': () => {
+      instalarOcultoAhora = true;
+      try {
+        localStorage.setItem(LLAVE_INSTALAR, '1');
+      } catch (e) {
+        // Sin almacenamiento: solo se oculta en esta visita.
+      }
+      renderAvisoInstalar();
+      notificar('Cuando quieras, la instalas desde Compartir en Safari');
+    },
     exportar: () => exportar(),
     'borrar-todo': async () => {
       const si = await confirmar({
@@ -2884,6 +2963,26 @@
         ? 'Tus datos se guardan solo en este celular o computador. Nadie más los ve.'
         : `Tus datos se guardan en ${almacen.donde}.`;
       $('#dlg-bienvenida').showModal();
+    }
+
+    if (esIOS() && !window.CUENTAS_CLARAS_ALMACEN && navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
+
+    // Volver a encajar la cifra al girar el celular, al cambiar el tamaño y cuando termina de cargar la letra.
+    let encajePendiente = false;
+    const reencajar = () => {
+      if (encajePendiente) return;
+      encajePendiente = true;
+      requestAnimationFrame(() => {
+        encajePendiente = false;
+        encajarCifras();
+      });
+    };
+    window.addEventListener('resize', reencajar);
+    if (document.fonts) {
+      if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', reencajar);
+      if (document.fonts.ready) document.fonts.ready.then(reencajar).catch(() => {});
     }
 
     // Instalable y sin internet cuando la página está publicada en https.

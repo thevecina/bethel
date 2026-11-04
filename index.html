@@ -7,6 +7,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Organiza tu plata por quincenas: lo que ganas, tus pagos fijos, tus gastos, tus metas y tus deudas.">
 <meta name="color-scheme" content="light">
+<meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#faf8f2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -85,6 +86,10 @@
     <div class="aviso aviso-pagos" id="aviso-pagos" hidden>
       <p id="aviso-pagos-texto"></p>
       <a class="btn-capsula" href="#resumen">Ver pagos</a>
+    </div>
+    <div class="aviso aviso-instalar" id="aviso-instalar" hidden>
+      <p><b>Instálala en tu iPhone.</b> En Safari toca Compartir <svg class="icono-compartir" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14V3M8 7l4-4 4 4M7 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-1"/></svg> (o el menú ···) y luego «Agregar a inicio». Así se abre como una app y Safari no te borra los datos aunque pases días sin abrirla.</p>
+      <button type="button" class="btn-capsula" data-accion="ocultar-instalar">Ahora no</button>
     </div>
   </div>
 

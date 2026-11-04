@@ -466,6 +466,29 @@ dialog:focus-visible,
   background: var(--naranja-suave);
 }
 
+.aviso-instalar {
+  background: var(--verde-suave);
+}
+
+.aviso-instalar p {
+  flex-basis: 100%;
+}
+
+.aviso-instalar .btn-capsula {
+  background: var(--blanco);
+}
+
+.icono-compartir {
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+  fill: none;
+  stroke: var(--azul-texto);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* ---------- Botones ---------- */
 
 .btn {
@@ -1056,6 +1079,7 @@ dialog:focus-visible,
 }
 
 .hero-info {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -1073,7 +1097,7 @@ dialog:focus-visible,
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
+  white-space: nowrap; /* en una sola línea: si no cabe, app.js achica la letra */
 }
 
 .hero-cifra[data-nivel="mal"] {
@@ -1432,7 +1456,7 @@ dialog:focus-visible,
   border-radius: 17px;
   background-color: var(--blanco);
   color: var(--verde-fuerte);
-  font-size: 15px;
+  font-size: 16px; /* con menos de 16px, el iPhone hace zoom al tocarlo */
   font-weight: 600;
   cursor: pointer;
 }
@@ -2058,6 +2082,7 @@ dialog:focus-visible,
   gap: 16px;
   padding: 16px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -2305,6 +2330,7 @@ select:focus-visible {
   min-height: 0;
   padding: 22px 24px 18px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .bienvenida-logo {
@@ -2479,6 +2505,36 @@ select:focus-visible {
 }
 
 /* ---------- Celular ---------- */
+
+/* ---------- iPhone ---------- */
+
+/* Con una hoja abierta, la página de atrás no se desplaza (en Safari del iPhone sí lo hacía). */
+@media (max-width: 899.98px) {
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+}
+
+/* Al dejar el dedo sobre una pestaña, que no salga la vista previa del enlace. */
+.pestana,
+a.btn-capsula {
+  -webkit-touch-callout: none;
+}
+
+/* Solo Safari del iPhone: centra la fecha y le pone su propio estilo. La dejamos como los demás campos. */
+@supports (-webkit-touch-callout: none) {
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    line-height: 46px;
+  }
+
+  input[type="date"]::-webkit-date-and-time-value {
+    margin: 0;
+    text-align: left;
+  }
+}
 
 @media (max-width: 559.98px) {
   .hoja {
