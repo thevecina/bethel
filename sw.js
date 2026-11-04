@@ -1,7 +1,7 @@
 /* Agente de Dinero: permite abrir la página sin internet.
    Siempre intenta traer la versión nueva; si no hay conexión, usa la guardada. */
-const CACHE = 'agente-de-dinero-v4';
-const ARCHIVOS = ['./', './index.html', './estilos.css', './app.js', './manifest.webmanifest', './icono.svg', './icono-192.png', './icono-512.png', './icono-180.png'];
+const CACHE = 'agente-de-dinero-v5';
+const ARCHIVOS = ['./', './index.html', './estilos.css', './app.js', './nube.js', './firebase-config.js', './manifest.webmanifest', './icono.svg', './icono-192.png', './icono-512.png', './icono-180.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
@@ -20,7 +20,10 @@ self.addEventListener('fetch', (e) => {
   if (pedido.method !== 'GET') return;
   const url = new URL(pedido.url);
   const esFuente = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-  if (url.origin !== self.location.origin && !esFuente) return;
+  // Los archivos de Firebase (para iniciar sesión) también se guardan, así la app abre sin internet.
+  // Lo que va a los servidores de Firebase (tus datos) no pasa por aquí.
+  const esFirebase = url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/');
+  if (url.origin !== self.location.origin && !esFuente && !esFirebase) return;
   e.respondWith(
     fetch(pedido)
       .then((respuesta) => {

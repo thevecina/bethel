@@ -49,9 +49,53 @@ En iPhone vale la pena instalarla: si la usas solo desde Safari y pasas días si
 Safari puede borrar lo que la página tiene guardado. Instalada no pasa. La página te lo
 recuerda con un aviso en el Resumen (lo puedes cerrar con «Ahora no»).
 
+## Iniciar sesión y ver tus datos en cualquier dispositivo
+
+Con una cuenta (correo y contraseña), tus datos se guardan en la nube y los ves igual en el
+iPhone, en el computador o donde inicies sesión. Sin internet se sigue usando: los cambios
+se suben solos cuando vuelve la conexión. La nube es **Firebase** (de Google), en un proyecto
+tuyo y gratis para el uso de una persona. Se activa una sola vez (mejor desde un computador):
+
+1. Entra a <https://console.firebase.google.com> con tu cuenta de Google y toca
+   **Crear un proyecto**. Ponle un nombre, por ejemplo `agente-de-dinero`.
+   Google Analytics no hace falta: lo puedes desactivar.
+2. **Inicio de sesión:** en el menú, *Authentication* → **Comenzar** → pestaña
+   *Método de acceso* → **Correo electrónico/contraseña** → activa la primera opción → **Guardar**.
+3. **Base de datos:** en el menú, *Firestore Database* → **Crear base de datos**. Elige una
+   ubicación (por ejemplo `southamerica-east1`, São Paulo, la más cercana a Colombia; después no
+   se puede cambiar) y el modo **producción**. Luego, en la pestaña **Reglas**, borra lo que hay,
+   pega esto y toca **Publicar**:
+
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       // Cada persona solo puede leer y escribir sus propios datos.
+       match /usuarios/{uid}/datos/{documento} {
+         allow read, write: if request.auth != null && request.auth.uid == uid;
+       }
+     }
+   }
+   ```
+4. **La app web:** en el engranaje ⚙️ → *Configuración del proyecto* → *Tus apps* → el ícono
+   **`</>`** (Web). Ponle de nombre *Agente de Dinero* y toca **Registrar app** (Firebase Hosting
+   no hace falta). Te muestra un bloque `const firebaseConfig = { … }`.
+5. Copia esos valores en `firebase-config.js`, donde dice `null` (ahí mismo hay un ejemplo de
+   cómo queda). Esos valores no son secretos: lo que protege tus datos son las reglas del paso 3.
+6. En *Authentication* → *Configuración* → *Dominios autorizados*, agrega el dominio de tu página
+   (por ejemplo `thevecina.github.io`).
+
+Listo: al abrir la página sale **Crear cuenta** y **Ya tengo cuenta**. Si ya tenías datos sin
+cuenta en ese dispositivo, se suben a tu cuenta al entrar. En *Mi plan → Tus datos* ves con qué
+correo entraste y puedes **cerrar sesión**. Si olvidas la contraseña, en *Ya tengo cuenta* toca
+**¿Olvidaste tu contraseña?** y te llega un correo (revisa también la carpeta de spam).
+
+Mientras `firebase-config.js` diga `null`, la app funciona sin cuenta, como antes.
+
 ## Tus datos
 
-Se guardan **solo en tu navegador** (localStorage) y no se envían a ningún lado.
+Sin cuenta, se guardan **solo en tu navegador** (localStorage) y no se envían a ningún lado.
+Con cuenta, se guardan en tu proyecto de Firebase y solo tú los puedes ver.
 Si borras el historial del navegador o cambias de celular, se pierden; por eso en
 *Mi plan → Tus datos* puedes **descargar una copia** (.json) y **restaurarla** donde quieras.
 En iPhone, *Descargar una copia* abre la hoja de **Compartir**: la puedes guardar en Archivos
@@ -62,4 +106,6 @@ o iCloud, o mandártela por WhatsApp o correo.
 - `index.html`: la estructura de la página.
 - `estilos.css`: el diseño (crema, verde y amarillo; celular y computador).
 - `app.js`: los cálculos y el guardado, con comentarios en español.
+- `nube.js`: la cuenta (iniciar sesión) y el guardado en Firebase. Solo se carga si hay configuración.
+- `firebase-config.js`: la configuración de tu proyecto de Firebase (o `null` para usarla sin cuenta).
 - `manifest.webmanifest`, `sw.js` e `icono*`: lo necesario para instalarla como app y usarla sin internet.

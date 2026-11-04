@@ -187,6 +187,11 @@
     <section class="grupo datos" aria-labelledby="t-datos">
       <h2 class="grupo-titulo" id="t-datos">Tus datos</h2>
       <div class="lista">
+        <div class="fila fila-cuenta" id="fila-cuenta" hidden>
+          <svg class="fila-cuenta-icono" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5c1.2-3.3 3.9-5 7-5s5.8 1.7 7 5"/></svg>
+          <span class="fila-cuenta-texto"><span>Sesión iniciada</span><strong id="cuenta-correo-texto"></strong></span>
+        </div>
+        <button type="button" class="fila fila-accion" data-accion="abrir-cuenta" id="btn-entrar" hidden>Iniciar sesión o crear cuenta</button>
         <div class="fila fila-campo">
           <label for="nombre">Tu nombre</label>
           <input type="text" id="nombre" maxlength="30" autocomplete="given-name" placeholder="Opcional">
@@ -196,6 +201,7 @@
         <label class="fila fila-accion" for="importar-archivo">Restaurar una copia</label>
         <input type="file" id="importar-archivo" class="sr-only" accept="application/json,.json">
         <button type="button" class="fila fila-accion fila-peligro" data-accion="borrar-todo">Borrar todo</button>
+        <button type="button" class="fila fila-accion fila-peligro" data-accion="cerrar-sesion" id="btn-salir" hidden>Cerrar sesión</button>
       </div>
       <p class="grupo-pie" id="datos-donde"></p>
     </section>
@@ -232,7 +238,7 @@
 </main>
 
 <footer class="pie">
-  <p>Agente de Dinero · Tus datos se guardan en <span data-donde>este navegador</span> y no se envían a ningún lado.</p>
+  <p>Agente de Dinero · Tus datos se guardan en <span data-donde>este navegador</span><span id="pie-cola"> y no se envían a ningún lado</span>.</p>
 </footer>
 
 <!-- HOJA: BIENVENIDA -->
@@ -262,9 +268,45 @@
         <div><strong>Privado</strong><p id="bienvenida-privado">Tus datos se guardan solo en este navegador. Nadie más los ve.</p></div>
       </li>
     </ul>
-    <button type="button" class="btn btn-primario btn-grande" data-accion="empezar">Empezar con mis datos</button>
+    <button type="button" class="btn btn-primario btn-grande" data-accion="empezar" id="bienvenida-empezar">Empezar con mis datos</button>
+    <button type="button" class="btn btn-sutil btn-grande" data-accion="ya-tengo-cuenta" id="bienvenida-entrar" hidden>Ya tengo cuenta</button>
     <button type="button" class="enlace enlace-centrado" data-accion="ver-ejemplo">Ver un ejemplo primero</button>
   </div>
+</dialog>
+
+<!-- HOJA: CUENTA (iniciar sesión o crear cuenta) -->
+<dialog class="hoja" id="dlg-cuenta" aria-labelledby="dlg-cuenta-titulo">
+  <form class="hoja-form" id="form-cuenta" novalidate>
+    <div class="hoja-cabeza">
+      <button type="button" class="hoja-boton" data-accion="cerrar-dialogo">Cancelar</button>
+      <h2 class="hoja-titulo" id="dlg-cuenta-titulo">Crear cuenta</h2>
+      <span class="hoja-boton" aria-hidden="true"></span>
+    </div>
+    <div class="hoja-cuerpo">
+      <div class="segmento" role="radiogroup" aria-label="¿Qué quieres hacer?">
+        <button type="button" role="radio" data-accion="cuenta-modo" data-modo="crear">Crear cuenta</button>
+        <button type="button" role="radio" data-accion="cuenta-modo" data-modo="entrar">Ya tengo cuenta</button>
+      </div>
+      <p class="nota-hoja" id="cuenta-explica">Con una cuenta, tus datos se guardan en la nube y los ves en tu iPhone, en tu computador o donde inicies sesión. Solo tú puedes verlos.</p>
+      <div class="campo">
+        <label for="cuenta-correo">Correo</label>
+        <input type="email" id="cuenta-correo" autocomplete="username" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="120" placeholder="tucorreo@ejemplo.com">
+      </div>
+      <div class="campo">
+        <label for="cuenta-clave">Contraseña</label>
+        <div class="campo-clave">
+          <input type="password" id="cuenta-clave" autocomplete="new-password" maxlength="100" aria-describedby="cuenta-ayuda">
+          <button type="button" class="ver-clave" data-accion="ver-clave" aria-pressed="false">Mostrar</button>
+        </div>
+        <p class="ayuda" id="cuenta-ayuda">Mínimo 6 letras o números.</p>
+      </div>
+      <p class="error" id="cuenta-error" role="alert" hidden></p>
+      <p class="nota-hoja nota-bien" id="cuenta-aviso" role="status" hidden></p>
+      <button type="submit" class="btn btn-primario btn-grande" id="cuenta-enviar">Crear cuenta</button>
+      <button type="button" class="enlace enlace-centrado" data-accion="olvide-clave" id="cuenta-olvide" hidden>¿Olvidaste tu contraseña?</button>
+      <button type="button" class="enlace enlace-centrado" data-accion="sin-cuenta" id="cuenta-sin" hidden>Usar sin cuenta (solo en este dispositivo)</button>
+    </div>
+  </form>
 </dialog>
 
 <!-- HOJA: ANOTAR GASTO / INGRESO / PAGO -->
@@ -478,6 +520,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+<script src="firebase-config.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

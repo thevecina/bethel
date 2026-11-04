@@ -916,7 +916,7 @@
 
   // Safari borra lo guardado por una página si pasas días sin abrirla; instalada, no.
   function renderAvisoInstalar() {
-    $('#aviso-instalar').hidden = !(esIOS() && !enModoApp() && !window.CUENTAS_CLARAS_ALMACEN
+    $('#aviso-instalar').hidden = !(esIOS() && !enModoApp() && almacen === almacenLocal
       && !datos.ejemplo && ui.vista === 'resumen' && !instalarOculto());
   }
 
@@ -1002,6 +1002,29 @@
         /* si falla, se usa el navegador */
       }
     }
+    if (nubeConfigurada()) {
+      try {
+        nube = await conTiempoApp(conectarNube(), 20000);
+      } catch (e) {
+        nube = null;
+      }
+      if (nube && nube.usuario) return nube.almacen();
+      if (!nube && cuentaRecordada()) {
+        // Había una sesión abierta pero no se pudo conectar (sin internet, por ejemplo):
+        // mejor no mostrar nada que empezar de cero encima de lo guardado.
+        return {
+          nube: true,
+          correo: cuentaRecordada(),
+          donde: 'tu cuenta (solo tú los ves)',
+          ok: true,
+          iniciar: async () => true,
+          cargar: async () => {
+            throw new Error('sin conexión');
+          },
+          guardar: async () => false,
+        };
+      }
+    }
     await almacenLocal.iniciar();
     return almacenLocal;
   }
@@ -1029,6 +1052,276 @@
         : `No se pudieron guardar tus últimos cambios en ${almacen.donde}. Descarga una copia desde Mi plan para no perderlos.`;
     }
     $('#aviso-guardado').hidden = ok !== false;
+    aplicarRemoto();
+  }
+
+  /* ─────────────────────── Cuenta (Firebase) ─────────────────────────── */
+
+  // Iniciar sesión con correo y contraseña para ver los datos en cualquier dispositivo.
+  // Solo existe si firebase-config.js trae la configuración del proyecto (ver README).
+
+  const CLAVE_CUENTA = 'agente-de-dinero:cuenta';
+  let nube = null;
+  const cuentaEstado = { modo: 'crear', desdeInicio: false, ocupado: false };
+  const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function nubeConfigurada() {
+    return !!window.AGENTE_FIREBASE && !window.CUENTAS_CLARAS_ALMACEN;
+  }
+
+  function conTiempoApp(promesa, ms) {
+    let reloj;
+    return Promise.race([
+      promesa,
+      new Promise((_, rechazar) => {
+        reloj = setTimeout(() => rechazar(new Error('tiempo')), ms);
+      }),
+    ]).finally(() => clearTimeout(reloj));
+  }
+
+  async function conectarNube() {
+    const modulo = await import('./nube.js');
+    return modulo.conectar(window.AGENTE_FIREBASE);
+  }
+
+  function cuentaRecordada() {
+    try {
+      return localStorage.getItem(CLAVE_CUENTA) || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function recordarCuenta(correo) {
+    try {
+      localStorage.setItem(CLAVE_CUENTA, correo);
+    } catch (e) {
+      /* sin almacenamiento: no pasa nada */
+    }
+  }
+
+  function olvidarCuenta() {
+    try {
+      localStorage.removeItem(CLAVE_CUENTA);
+    } catch (e) {
+      /* sin almacenamiento: no pasa nada */
+    }
+  }
+
+  function tieneDatosPropios(d) {
+    return !d.ejemplo && (d.movimientos.length > 0 || d.metas.length > 0 || d.deudas.length > 0
+      || d.fijos.length > 0 || d.ingresos.some((i) => i.monto > 0) || !!d.nombre);
+  }
+
+  // Al pasar a la cuenta, lo que había en este navegador queda como respaldo y deja de usarse.
+  function respaldarLocal() {
+    try {
+      const texto = localStorage.getItem(CLAVE_LOCAL);
+      if (texto) localStorage.setItem(`${CLAVE_LOCAL}:respaldo`, texto);
+      localStorage.removeItem(CLAVE_LOCAL);
+    } catch (e) {
+      /* sin almacenamiento: no hay nada que mover */
+    }
+  }
+
+  function renderCuenta() {
+    const conCuenta = !!almacen.nube;
+    $('#fila-cuenta').hidden = !conCuenta;
+    $('#btn-salir').hidden = !conCuenta;
+    $('#btn-entrar').hidden = conCuenta || !nube;
+    $('#cuenta-correo-texto').textContent = conCuenta ? almacen.correo || '' : '';
+    $('#pie-cola').hidden = almacen !== almacenLocal;
+  }
+
+  function abrirCuenta(modo, desdeInicio) {
+    if (!nube) {
+      notificar('No se pudo conectar. Revisa tu internet y vuelve a intentar.');
+      return;
+    }
+    cuentaEstado.modo = modo;
+    cuentaEstado.desdeInicio = desdeInicio;
+    for (const d of $$('dialog[open]')) d.close();
+    $('#form-cuenta').reset();
+    $('#cuenta-correo').value = cuentaRecordada();
+    $('#cuenta-aviso').hidden = true;
+    verClave(false);
+    actualizarCuenta();
+    $('#dlg-cuenta').showModal();
+    ($('#cuenta-correo').value ? $('#cuenta-clave') : $('#cuenta-correo')).focus();
+  }
+
+  function actualizarCuenta() {
+    const crear = cuentaEstado.modo === 'crear';
+    for (const b of $$('[data-accion="cuenta-modo"]')) b.setAttribute('aria-checked', String(b.dataset.modo === cuentaEstado.modo));
+    $('#dlg-cuenta-titulo').textContent = crear ? 'Crear cuenta' : 'Iniciar sesión';
+    $('#cuenta-enviar').textContent = crear ? 'Crear cuenta' : 'Iniciar sesión';
+    $('#cuenta-clave').setAttribute('autocomplete', crear ? 'new-password' : 'current-password');
+    $('#cuenta-ayuda').hidden = !crear;
+    $('#cuenta-olvide').hidden = crear;
+    $('#cuenta-sin').hidden = !cuentaEstado.desdeInicio;
+    ocultarError('cuenta');
+  }
+
+  function verClave(ver) {
+    $('#cuenta-clave').type = ver ? 'text' : 'password';
+    const boton = $('[data-accion="ver-clave"]');
+    boton.textContent = ver ? 'Ocultar' : 'Mostrar';
+    boton.setAttribute('aria-pressed', String(ver));
+  }
+
+  function ocuparCuenta(ocupado, texto) {
+    cuentaEstado.ocupado = ocupado;
+    const boton = $('#cuenta-enviar');
+    boton.setAttribute('aria-busy', String(ocupado));
+    if (ocupado) boton.textContent = texto;
+    else actualizarCuenta();
+  }
+
+  function mensajeCuenta(err) {
+    const iguales = 'El correo o la contraseña no coinciden. Revisa y vuelve a intentar.';
+    const sinActivar = 'El inicio de sesión con correo no está activado en Firebase (mira los pasos del README).';
+    const textos = {
+      'auth/invalid-email': 'Ese correo no es válido. Revísalo.',
+      'auth/missing-email': 'Escribe tu correo.',
+      'auth/missing-password': 'Escribe tu contraseña.',
+      'auth/invalid-credential': iguales,
+      'auth/invalid-login-credentials': iguales,
+      'auth/wrong-password': iguales,
+      'auth/user-not-found': iguales,
+      'auth/email-already-in-use': 'Ya hay una cuenta con ese correo. Toca «Ya tengo cuenta» para entrar.',
+      'auth/weak-password': 'La contraseña debe tener al menos 6 letras o números.',
+      'auth/too-many-requests': 'Hubo muchos intentos seguidos. Espera unos minutos y vuelve a intentar.',
+      'auth/network-request-failed': 'No hay conexión. Revisa tu internet y vuelve a intentar.',
+      'auth/user-disabled': 'Esta cuenta está desactivada.',
+      'auth/operation-not-allowed': sinActivar,
+      'auth/configuration-not-found': sinActivar,
+      tiempo: 'Tardó demasiado. Revisa tu internet y vuelve a intentar.',
+    };
+    return textos[(err && err.code) || ''] || 'No se pudo. Vuelve a intentar en un momento.';
+  }
+
+  async function enviarCuenta(e) {
+    e.preventDefault();
+    if (cuentaEstado.ocupado) return;
+    const crear = cuentaEstado.modo === 'crear';
+    const correo = $('#cuenta-correo').value.trim();
+    const clave = $('#cuenta-clave').value;
+    ocultarError('cuenta');
+    $('#cuenta-aviso').hidden = true;
+    if (!CORREO_VALIDO.test(correo)) {
+      mostrarError('cuenta', 'Escribe tu correo completo, por ejemplo ana@gmail.com.', $('#cuenta-correo'));
+      return;
+    }
+    if (!clave) {
+      mostrarError('cuenta', 'Escribe tu contraseña.', $('#cuenta-clave'));
+      return;
+    }
+    if (crear && clave.length < 6) {
+      mostrarError('cuenta', 'La contraseña debe tener al menos 6 letras o números.', $('#cuenta-clave'));
+      return;
+    }
+    ocuparCuenta(true, crear ? 'Creando tu cuenta…' : 'Entrando…');
+    try {
+      if (crear) await nube.crearCuenta(correo, clave);
+      else await nube.entrar(correo, clave);
+    } catch (err) {
+      ocuparCuenta(false);
+      mostrarError('cuenta', mensajeCuenta(err), err && err.code === 'auth/email-already-in-use' ? null : $('#cuenta-clave'));
+      return;
+    }
+    recordarCuenta(correo);
+    try {
+      await pasarDatosALaCuenta();
+    } catch (err) {
+      // La sesión quedó abierta: al volver a abrir se intenta leer la cuenta otra vez.
+    }
+    location.reload();
+  }
+
+  // Si en este navegador ya había datos sin cuenta, se suben a la cuenta (o se elige cuáles usar).
+  async function pasarDatosALaCuenta() {
+    if (almacen !== almacenLocal || !tieneDatosPropios(datos)) return;
+    if (temporizadorGuardar) await guardarYa();
+    const destino = nube.almacen();
+    const enLaCuenta = await destino.cargar();
+    let usarLosDeAqui = !enLaCuenta;
+    if (enLaCuenta) {
+      const r = await preguntar({
+        titulo: 'Ya tienes datos en tu cuenta',
+        texto: 'En este dispositivo también tienes datos. ¿Cuáles quieres usar? Los otros se reemplazan.',
+        si: 'Los de mi cuenta',
+        no: 'Los de este dispositivo',
+      });
+      usarLosDeAqui = r === 'no';
+    }
+    if (usarLosDeAqui) await destino.reemplazarTodo(datos);
+    respaldarLocal();
+  }
+
+  async function recuperarClave() {
+    const correo = $('#cuenta-correo').value.trim();
+    ocultarError('cuenta');
+    $('#cuenta-aviso').hidden = true;
+    if (!CORREO_VALIDO.test(correo)) {
+      mostrarError('cuenta', 'Escribe tu correo arriba y vuelve a tocar «¿Olvidaste tu contraseña?».', $('#cuenta-correo'));
+      return;
+    }
+    try {
+      await nube.recuperar(correo);
+    } catch (err) {
+      if (!err || err.code !== 'auth/user-not-found') {
+        mostrarError('cuenta', mensajeCuenta(err));
+        return;
+      }
+    }
+    const aviso = $('#cuenta-aviso');
+    aviso.textContent = `Si hay una cuenta con ${correo}, te llega un correo para crear una contraseña nueva. Revisa también la carpeta de spam.`;
+    aviso.hidden = false;
+  }
+
+  async function cerrarSesion() {
+    const si = await confirmar({
+      titulo: '¿Cerrar sesión?',
+      texto: 'Tus datos quedan guardados en tu cuenta. En este dispositivo la app vuelve a empezar hasta que inicies sesión otra vez.',
+      si: 'Cerrar sesión',
+    });
+    if (!si) return;
+    if (!nube) {
+      notificar('Sin conexión: no se pudo cerrar la sesión. Intenta otra vez con internet.');
+      return;
+    }
+    if (temporizadorGuardar) await guardarYa();
+    if (!(await nube.todoSubido())) {
+      const igual = await confirmar({
+        titulo: 'Hay cambios sin subir',
+        texto: 'Estás sin internet y algunos cambios todavía no llegan a tu cuenta. Si cierras sesión ahora, se pierden.',
+        si: 'Cerrar sesión igual',
+      });
+      if (!igual) return;
+    }
+    await nube.salir();
+    olvidarCuenta();
+    location.replace(location.pathname + location.search);
+  }
+
+  // Cambios hechos en otro dispositivo. Si estás anotando o editando algo, esperan a que termines.
+  function aplicarRemoto() {
+    if (!almacen || !almacen.tomarRemotos || temporizadorGuardar || document.querySelector('dialog[open]')) return;
+    const nuevos = almacen.tomarRemotos();
+    if (!nuevos) return;
+    datos = normalizar(nuevos, hoyISO());
+    tocarDatos();
+    renderVista();
+    notificar('Se actualizó con lo que hiciste en otro dispositivo');
+  }
+
+  function escucharNube() {
+    if (!almacen.escuchar) return;
+    almacen.escuchar(aplicarRemoto, () => {
+      $('#aviso-guardado-texto').textContent = 'No se pudieron guardar tus últimos cambios en tu cuenta. Revisa tu internet o vuelve a iniciar sesión.';
+      $('#aviso-guardado').hidden = false;
+    });
+    document.addEventListener('close', aplicarRemoto, true);
   }
 
   /* ──────────────────────────── Notificaciones ────────────────────────── */
@@ -1049,18 +1342,24 @@
     temporizadorToast = setTimeout(() => { t.hidden = true; }, accion ? 7000 : 3500);
   }
 
-  function confirmar({ titulo, texto, si = 'Sí, borrar', peligro = true }) {
+  // Devuelve 'si', 'no' o '' (si se cerró sin elegir).
+  function preguntar({ titulo, texto, si, no = 'Cancelar', peligro = false }) {
     const d = $('#dlg-confirmar');
     $('#conf-titulo').textContent = titulo;
     $('#conf-texto').textContent = texto;
     const boton = $('#conf-si');
     boton.textContent = si;
     boton.className = `alerta-ios-boton${peligro ? ' alerta-ios-peligro' : ''}`;
+    $('#dlg-confirmar [value="no"]').textContent = no;
     d.returnValue = '';
     return new Promise((resolver) => {
-      d.addEventListener('close', () => resolver(d.returnValue === 'si'), { once: true });
+      d.addEventListener('close', () => resolver(d.returnValue), { once: true });
       d.showModal();
     });
+  }
+
+  async function confirmar({ titulo, texto, si = 'Sí, borrar', peligro = true }) {
+    return (await preguntar({ titulo, texto, si, peligro })) === 'si';
   }
 
   /* ──────────────────────────── Pedazos de HTML ───────────────────────── */
@@ -1664,7 +1963,10 @@
       : 'Primero escribe cuánto ganas.';
     $('#reparto').innerHTML = htmlReparto();
     $('#diagnostico').innerHTML = calcularDiagnostico().map(htmlAviso).join('');
-    $('#datos-donde').textContent = almacen.donde === 'este navegador'
+    $('#datos-donde').textContent = almacen.nube
+      ? 'Tus datos se guardan en tu cuenta y los ves en cualquier dispositivo donde inicies sesión con tu correo. Solo tú puedes verlos.'
+        + (navigator.onLine === false ? ' Ahora estás sin internet: tus cambios quedan en este dispositivo y se suben solos cuando vuelva la conexión.' : '')
+      : almacen.donde === 'este navegador'
       ? 'Tus datos se guardan solo en este navegador. Si borras el historial o cambias de celular, se pierden: descarga una copia de vez en cuando.'
         + (esIOS() && !enModoApp() ? ' En iPhone, instálala desde Safari con Compartir › «Agregar a inicio» para que Safari no los borre si pasas días sin abrirla.' : '')
       : `Tus datos se guardan en ${almacen.donde}. También puedes descargar una copia.`;
@@ -2132,6 +2434,7 @@
     $('#aviso-ejemplo').hidden = !datos.ejemplo;
     renderAvisoPagos();
     renderAvisoInstalar();
+    renderCuenta();
     for (const el of $$('[data-donde]')) el.textContent = almacen.donde;
     renderSaludo();
     if (ui.vista === 'resumen' || ui.vista === 'gastos') {
@@ -2704,7 +3007,21 @@
       if (datos.metas.length === 1) abrirAbono({ meta: datos.metas[0] });
       else irA('metas');
     },
-    empezar: () => empezarDeCero(),
+    empezar: () => {
+      if (nube && almacen === almacenLocal) abrirCuenta('crear', true);
+      else empezarDeCero();
+    },
+    'ya-tengo-cuenta': () => abrirCuenta('entrar', true),
+    'abrir-cuenta': () => abrirCuenta(cuentaRecordada() ? 'entrar' : 'crear', false),
+    'cuenta-modo': (el) => {
+      cuentaEstado.modo = el.dataset.modo;
+      $('#cuenta-aviso').hidden = true;
+      actualizarCuenta();
+    },
+    'ver-clave': () => verClave($('#cuenta-clave').type === 'password'),
+    'olvide-clave': () => recuperarClave(),
+    'sin-cuenta': () => empezarDeCero(),
+    'cerrar-sesion': () => cerrarSesion(),
     'ocultar-instalar': () => {
       instalarOcultoAhora = true;
       try {
@@ -2719,7 +3036,9 @@
     'borrar-todo': async () => {
       const si = await confirmar({
         titulo: '¿Borrar todos tus datos?',
-        texto: 'Se borran tu plan, tus gastos y tus metas. Si quieres guardarlos, primero descarga una copia.',
+        texto: almacen.nube
+          ? 'Se borran tu plan, tus gastos, tus metas y tus deudas de tu cuenta, en todos tus dispositivos. Si quieres guardarlos, primero descarga una copia.'
+          : 'Se borran tu plan, tus gastos y tus metas. Si quieres guardarlos, primero descarga una copia.',
         si: 'Sí, borrar todo',
       });
       if (!si) return;
@@ -2902,6 +3221,7 @@
     $('#form-abono').addEventListener('submit', guardarAbono);
     $('#form-deuda').addEventListener('submit', guardarDeuda);
     $('#form-item').addEventListener('submit', guardarEditor);
+    $('#form-cuenta').addEventListener('submit', enviarCuenta);
 
     // Tocar fuera de una hoja la cierra (las alertas de confirmar no).
     for (const d of $$('dialog.hoja')) {
@@ -2947,8 +3267,11 @@
 
     if (fallo) {
       // Mejor no guardar nada en esta visita que borrar lo que ya estaba guardado.
-      almacen = { donde: almacen.donde, guardar: async () => false };
-      $('#aviso-guardado-texto').textContent = 'No pudimos leer tus datos guardados, así que en esta visita no se guardará nada. Vuelve a abrir la página en un rato.';
+      const eraNube = !!almacen.nube;
+      almacen = { donde: almacen.donde, nube: eraNube, correo: almacen.correo, guardar: async () => false };
+      $('#aviso-guardado-texto').textContent = eraNube
+        ? 'No pudimos traer tus datos de tu cuenta. Revisa tu internet y vuelve a abrir la app. Mientras tanto no se guardará nada.'
+        : 'No pudimos leer tus datos guardados, así que en esta visita no se guardará nada. Vuelve a abrir la página en un rato.';
       $('#aviso-guardado').hidden = false;
     } else if (almacen.ok === false) {
       $('#aviso-guardado').hidden = false;
@@ -2957,12 +3280,30 @@
     $('#cargando').hidden = true;
     rutear();
 
-    // La primera vez: hoja de bienvenida, como cuando abres una app nueva.
-    if (!guardados && !fallo) {
-      $('#bienvenida-privado').textContent = almacen.donde === 'este navegador'
-        ? 'Tus datos se guardan solo en este celular o computador. Nadie más los ve.'
-        : `Tus datos se guardan en ${almacen.donde}.`;
+    if (!guardados && !fallo && almacen.nube) {
+      // Cuenta nueva: directo a armar el plan.
+      empezarDeCero();
+    } else if (!guardados && !fallo) {
+      // La primera vez: hoja de bienvenida, como cuando abres una app nueva.
+      if (nube) {
+        $('#bienvenida-empezar').textContent = 'Crear cuenta';
+        $('#bienvenida-entrar').hidden = false;
+        $('#bienvenida-privado').textContent = 'Con tu cuenta, tus datos se guardan en la nube y los ves en cualquier dispositivo. Solo tú puedes verlos.';
+      } else {
+        $('#bienvenida-privado').textContent = almacen.donde === 'este navegador'
+          ? 'Tus datos se guardan solo en este celular o computador. Nadie más los ve.'
+          : `Tus datos se guardan en ${almacen.donde}.`;
+      }
       $('#dlg-bienvenida').showModal();
+    }
+
+    if (almacen.nube && !fallo) {
+      escucharNube();
+      const alCambiarConexion = () => {
+        if (ui.vista === 'plan') renderPlan();
+      };
+      window.addEventListener('online', alCambiarConexion);
+      window.addEventListener('offline', alCambiarConexion);
     }
 
     if (esIOS() && !window.CUENTAS_CLARAS_ALMACEN && navigator.storage && navigator.storage.persist) {
