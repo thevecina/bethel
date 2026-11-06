@@ -2467,6 +2467,8 @@
   }
 
   function rutear() {
+    if (!datos) return; // todavía cargando (con cuenta, los datos vienen de internet); al terminar se dibuja
+
     const pedida = location.hash.replace('#', '');
     ui.vista = VISTAS.includes(pedida) ? pedida : 'resumen';
     for (const v of VISTAS) $(`#vista-${v}`).hidden = v !== ui.vista;
