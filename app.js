@@ -2367,8 +2367,40 @@
 
   let deudaEditando = null;
 
+  // Con un pago fijo elegido, la cuota y el día salen de ese pago; si no, se escriben aquí
+  // y al guardar se crea el pago fijo (así la deuda cuenta en el plan y en el Resumen).
   function actualizarCuotaDeuda() {
-    $('#deuda-cuota-campo').hidden = Boolean($('#deuda-fijo').value);
+    const elegido = Boolean($('#deuda-fijo').value);
+    $('#deuda-cuota-campos').hidden = elegido;
+    $('#deuda-nota-fijo').textContent = elegido
+      ? 'La cuota es ese pago fijo: cuando lo marques como pagado, baja la deuda.'
+      : 'La cuota se suma sola a tus pagos fijos del mes y te avisamos cuando toque pagarla.';
+  }
+
+  // Pagos fijos que se pueden elegir como cuota: los que no son ya la cuota de otra deuda.
+  function fijosLibresParaDeuda(dd) {
+    const usados = new Set(datos.deudas.filter((x) => x !== dd && x.fijoId).map((x) => x.fijoId));
+    return datos.fijos.filter((f) => !usados.has(f.id));
+  }
+
+  function crearFijoDeDeuda(nombre, cuota, dia) {
+    const [a, m, d] = hoyISO().split('-').map(Number);
+    const fijo = { id: nuevoId(), nombre: `Cuota ${nombre}`.slice(0, 40), monto: cuota, categoria: 'deudas', frecuencia: 'mensual', dia, desde: claveQuincena(a, m, d <= 15 ? 1 : 2) };
+    datos.fijos.push(fijo);
+    return fijo;
+  }
+
+  // Deudas guardadas antes de este cambio, con cuota pero sin pago fijo: se les crea.
+  function cuotasDeDeudasAFijos() {
+    let n = 0;
+    for (const dd of datos.deudas) {
+      if (dd.fijoId && fijoDeDeuda(dd)) continue;
+      if (!(dd.cuota > 0) || !(saldoDeDeuda(dd) > 0)) continue;
+      dd.fijoId = crearFijoDeDeuda(dd.nombre, dd.cuota, 1).id;
+      dd.cuota = 0;
+      n++;
+    }
+    return n;
   }
 
   function abrirDeuda(dd = null, enfocarSaldo = false) {
@@ -2378,10 +2410,13 @@
     const saldo = dd ? saldoDeDeuda(dd) : 0;
     $('#deuda-saldo').value = saldo ? miles(saldo) : '';
     $('#deuda-saldo').dataset.antes = String(saldo);
-    $('#deuda-fijo').innerHTML = '<option value="">No, la escribo aquí</option>' + datos.fijos
+    const libres = fijosLibresParaDeuda(dd);
+    $('#deuda-fijo-campo').hidden = !libres.length;
+    $('#deuda-fijo').innerHTML = '<option value="">No, agrégala a mis pagos fijos</option>' + libres
       .map((f) => `<option value="${esc(f.id)}"${dd && dd.fijoId === f.id ? ' selected' : ''}>${esc(f.nombre || 'Pago sin nombre')} · ${plata(f.monto * (f.frecuencia === 'quincenal' ? 2 : 1))} al mes</option>`)
       .join('');
     $('#deuda-cuota').value = dd && dd.cuota ? miles(dd.cuota) : '';
+    $('#deuda-dia').value = '';
     $('#deuda-tasa').value = dd && dd.tasaEA ? String(dd.tasaEA) : '';
     $('#deuda-eliminar').hidden = !dd;
     actualizarCuotaDeuda();
@@ -2397,29 +2432,34 @@
     const saldo = leerMonto($('#deuda-saldo').value);
     const fijoId = $('#deuda-fijo').value;
     const cuota = fijoId ? 0 : leerMonto($('#deuda-cuota').value);
+    const textoDia = $('#deuda-dia').value.trim();
+    const dia = textoDia ? Math.round(Number(textoDia)) : 1;
     const textoTasa = $('#deuda-tasa').value.trim().replace(',', '.');
     const tasa = textoTasa ? Number(textoTasa) : 0;
     if (!nombre) return mostrarError('deuda', 'Ponle un nombre a la deuda.', $('#deuda-nombre'));
     if (!deudaEditando && !saldo) return mostrarError('deuda', 'Escribe cuánto debes hoy.', $('#deuda-saldo'));
-    if (!fijoId && !cuota) return mostrarError('deuda', 'Escribe cuánto pagas al mes, o elige el pago fijo de la cuota.', $('#deuda-cuota'));
+    if (!fijoId && !cuota) return mostrarError('deuda', 'Escribe cuánto pagas de cuota al mes.', $('#deuda-cuota'));
+    if (!fijoId && (!Number.isFinite(dia) || dia < 1 || dia > 31)) return mostrarError('deuda', 'El día de pago es un número del 1 al 31.', $('#deuda-dia'));
     if (!Number.isFinite(tasa) || tasa < 0 || tasa > 200) return mostrarError('deuda', 'Revisa el interés: es un número entre 0 y 200.', $('#deuda-tasa'));
 
     const ahora = { fecha: hoyISO(), ts: marca() };
+    // Sin pago fijo elegido: se crea uno con la cuota, para que cuente en el plan.
+    const idFijo = fijoId || crearFijoDeDeuda(nombre, cuota, dia).id;
     if (deudaEditando) {
       const dd = deudaEditando;
-      Object.assign(dd, { nombre, cuota, fijoId, tasaEA: Math.round(tasa * 100) / 100 });
+      Object.assign(dd, { nombre, cuota: 0, fijoId: idFijo, tasaEA: Math.round(tasa * 100) / 100 });
       if (saldo !== Number($('#deuda-saldo').dataset.antes)) {
         dd.saldo = saldo;
         dd.base = ahora;
         dd.inicial = Math.max(dd.inicial, saldo);
       }
     } else {
-      datos.deudas.push({ id: nuevoId(), nombre, saldo, inicial: saldo, cuota, tasaEA: Math.round(tasa * 100) / 100, fijoId, base: ahora });
+      datos.deudas.push({ id: nuevoId(), nombre, saldo, inicial: saldo, cuota: 0, tasaEA: Math.round(tasa * 100) / 100, fijoId: idFijo, base: ahora });
     }
     $('#dlg-deuda').close();
     guardar();
     renderVista();
-    notificar(deudaEditando ? 'Deuda guardada' : 'Deuda agregada');
+    notificar(fijoId ? (deudaEditando ? 'Deuda guardada' : 'Deuda agregada') : `${deudaEditando ? 'Deuda guardada' : 'Deuda agregada'}. Su cuota ya está en tus pagos fijos`);
   }
 
   /* ─────────────────────────── Vistas y rutas ─────────────────────────── */
@@ -3129,11 +3169,14 @@
       if (!dd) return;
       const si = await confirmar({
         titulo: `¿Borrar la deuda “${dd.nombre}”?`,
-        texto: 'Sus abonos se quedan en tus gastos, para que tus cuentas pasadas no cambien.',
+        texto: fijoDeDeuda(dd)
+          ? 'También se quita su cuota de tus pagos fijos. Lo que ya pagaste se queda en tus gastos.'
+          : 'Sus abonos se quedan en tus gastos, para que tus cuentas pasadas no cambien.',
         si: 'Sí, borrar deuda',
       });
       if (!si) return;
       datos.deudas = datos.deudas.filter((x) => x !== dd);
+      if (dd.fijoId) datos.fijos = datos.fijos.filter((f) => f.id !== dd.fijoId);
       $('#dlg-deuda').close();
       guardar();
       renderVista();
@@ -3277,6 +3320,11 @@
       $('#aviso-guardado').hidden = false;
     } else if (almacen.ok === false) {
       $('#aviso-guardado').hidden = false;
+    }
+
+    if (!fallo && !datos.ejemplo && cuotasDeDeudasAFijos()) {
+      guardar();
+      setTimeout(() => notificar('Las cuotas de tus deudas ahora están en tus pagos fijos'), 600);
     }
 
     $('#cargando').hidden = true;

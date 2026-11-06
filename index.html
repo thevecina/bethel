@@ -480,12 +480,8 @@
         </div>
         <p class="ayuda">Míralo en el extracto o en la app del banco.</p>
       </div>
-      <div class="campo">
-        <label for="deuda-fijo">¿La cuota ya está en tus pagos fijos?</label>
-        <select id="deuda-fijo"></select>
-      </div>
-      <div class="campos-2">
-        <div class="campo" id="deuda-cuota-campo">
+      <div class="campos-2" id="deuda-cuota-campos">
+        <div class="campo">
           <label for="deuda-cuota">Cuota al mes</label>
           <div class="campo-plata">
             <span aria-hidden="true">$</span>
@@ -493,11 +489,20 @@
           </div>
         </div>
         <div class="campo">
-          <label for="deuda-tasa">Interés <span class="opcional">(% E.A.)</span></label>
-          <input type="number" id="deuda-tasa" min="0" max="200" step="0.1" inputmode="decimal" placeholder="Ej: 28">
+          <label for="deuda-dia">Día de pago</label>
+          <input type="number" id="deuda-dia" min="1" max="31" step="1" inputmode="numeric" placeholder="Ej: 5">
         </div>
       </div>
-      <p class="ayuda">El interés efectivo anual (E.A.) sale en el extracto. Si no lo sabes, déjalo vacío.</p>
+      <p class="nota-hoja" id="deuda-nota-fijo">La cuota se suma sola a tus pagos fijos del mes y te avisamos cuando toque pagarla.</p>
+      <div class="campo" id="deuda-fijo-campo">
+        <label for="deuda-fijo">¿Ya tenías esta cuota en tus pagos fijos?</label>
+        <select id="deuda-fijo"></select>
+      </div>
+      <div class="campo">
+        <label for="deuda-tasa">Interés <span class="opcional">(% E.A., opcional)</span></label>
+        <input type="number" id="deuda-tasa" min="0" max="200" step="0.1" inputmode="decimal" placeholder="Ej: 28">
+        <p class="ayuda">Sale en el extracto. Si no lo sabes, déjalo vacío.</p>
+      </div>
       <p class="error" id="deuda-error" role="alert" hidden></p>
       <button type="button" class="btn-eliminar" data-accion="eliminar-deuda" id="deuda-eliminar" hidden>Borrar deuda</button>
     </div>
